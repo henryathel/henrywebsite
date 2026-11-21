@@ -1,0 +1,2 @@
+# Copy to backend.hcl (git-ignored) and fill in the bootstrap output.
+bucket = "henrywebsite-tfstate-<account-id>"

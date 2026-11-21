@@ -1,0 +1,41 @@
+# Deploys public site content on merge to main. Terraform is never applied from CI;
+# infrastructure changes are applied locally by Henry.
+name: deploy
+
+on:
+  push:
+    branches: [main]
+    paths: [site/**]
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  site:
+    runs-on: ubuntu-latest
+    # Skipped until step 2 creates the bucket, distribution and deploy role.
+    if: vars.AWS_SITE_DEPLOY_ROLE_ARN != ''
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_SITE_DEPLOY_ROLE_ARN }}
+          aws-region: eu-west-2
+      # roles/ is owned by the private content repo and faces/ by the face pipeline;
+      # excluding them stops --delete from removing their objects.
+      - name: sync
+        run: >
+          aws s3 sync site/ "s3://${{ vars.SITE_BUCKET }}/"
+          --delete --exclude "roles/*" --exclude "faces/*"
+      - name: invalidate
+        run: >
+          aws cloudfront create-invalidation
+          --distribution-id "${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}"
+          --paths "/*"

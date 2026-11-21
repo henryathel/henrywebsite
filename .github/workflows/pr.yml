@@ -1,0 +1,97 @@
+name: pr
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  TF_VERSION: 1.17.2
+  AWS_REGION: eu-west-2
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "false"
+
+jobs:
+  terraform-checks:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+      - name: fmt
+        run: terraform fmt -check -recursive -diff
+      - name: validate bootstrap
+        working-directory: bootstrap
+        run: terraform init -backend=false && terraform validate
+      - name: validate infra
+        working-directory: infra
+        run: terraform init -backend=false && terraform validate
+
+  terraform-plan:
+    runs-on: ubuntu-latest
+    needs: terraform-checks
+    # Skipped until the plan role exists and its ARN is set as a repository variable.
+    if: vars.AWS_PLAN_ROLE_ARN != ''
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_PLAN_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: init
+        run: terraform init -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}"
+      # Logs are public on a public repo: never put secrets in plan output.
+      - name: plan
+        run: terraform plan -lock=false -no-color
+
+  checkov:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: bridgecrewio/checkov-action@b17b606d6ec72bb8ba5721ad5b7e340b80a9fc39 # v12.3142.0
+        with:
+          framework: terraform,github_actions
+          quiet: true
+
+  python:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # No-op until the Lambda package is added in step 3.
+      - id: detect
+        run: echo "present=$([ -f lambdas/pyproject.toml ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+      - if: steps.detect.outputs.present == 'true'
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - if: steps.detect.outputs.present == 'true'
+        working-directory: lambdas
+        run: |
+          pip install -e ".[dev]"
+          ruff check .
+          ruff format --check .
+          mypy .
+          pytest
