@@ -133,6 +133,7 @@ resource "aws_cloudfront_distribution" "site" {
   #checkov:skip=CKV_AWS_86:Access logging deferred; the visitor log covers who signed in.
   #checkov:skip=CKV_AWS_310:Origin failover needs a second bucket; not worth it for a personal site.
   #checkov:skip=CKV_AWS_374:Geo restriction would block legitimate recruiters.
+  #checkov:skip=CKV2_AWS_32:Every behaviour attaches a response headers policy; checkov can't resolve the for_each reference.
   enabled             = true
   is_ipv6_enabled     = true
   http_version        = "http2and3"
