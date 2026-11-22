@@ -26,7 +26,7 @@ line-length = 100
 extend-exclude = ["build", "dist"]
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I", "B", "UP", "S", "SIM", "RUF", "ANN"]
+select = ["E", "F", "W", "I", "B", "UP", "S", "SIM", "RUF", "ANN", "TC"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S101", "S105", "S106", "S303", "ANN"]

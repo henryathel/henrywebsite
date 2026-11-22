@@ -2,16 +2,20 @@
 
 from datetime import UTC, datetime
 from functools import cache
+from typing import TYPE_CHECKING
 
 import boto3
 from botocore.exceptions import ClientError
-from mypy_boto3_dynamodb.service_resource import Table
 
 from auth.config import required, settings
 
+# Type stubs are dev-only; they aren't in the Lambda package.
+if TYPE_CHECKING:
+    from mypy_boto3_dynamodb.service_resource import Table
+
 
 @cache
-def _table(name: str) -> Table:
+def _table(name: str) -> "Table":
     return boto3.resource("dynamodb").Table(name)
 
 

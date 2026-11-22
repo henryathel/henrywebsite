@@ -3,17 +3,21 @@
 import base64
 import json
 from functools import cache
+from typing import TYPE_CHECKING
 
 import boto3
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
-from mypy_boto3_ssm import SSMClient
 
 from auth.config import required, settings
 
+# Type stubs are dev-only; they aren't in the Lambda package.
+if TYPE_CHECKING:
+    from mypy_boto3_ssm import SSMClient
+
 
 @cache
-def _ssm() -> SSMClient:
+def _ssm() -> "SSMClient":
     return boto3.client("ssm")
 
 

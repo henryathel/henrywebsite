@@ -1,11 +1,15 @@
 """Sends the sign-in link with SES."""
 
 from functools import cache
+from typing import TYPE_CHECKING
 
 import boto3
-from mypy_boto3_sesv2 import SESV2Client
 
 from auth.config import required, settings
+
+# Type stubs are dev-only; they aren't in the Lambda package.
+if TYPE_CHECKING:
+    from mypy_boto3_sesv2 import SESV2Client
 
 SUBJECT = "Your sign-in link for henryashton.dev"
 
@@ -24,7 +28,7 @@ This mailbox doesn't receive replies.
 
 
 @cache
-def _ses() -> SESV2Client:
+def _ses() -> "SESV2Client":
     return boto3.client("sesv2")
 
 
