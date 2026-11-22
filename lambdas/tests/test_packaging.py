@@ -11,7 +11,7 @@ import sys
 import pytest
 
 DEV_ONLY = ("mypy_boto3_dynamodb", "mypy_boto3_sesv2", "mypy_boto3_ssm", "moto", "pytest")
-HANDLERS = ("auth.request_link", "auth.verify_link")
+HANDLERS = ("auth.request_code", "auth.verify_code")
 
 
 @pytest.mark.parametrize("handler", HANDLERS)

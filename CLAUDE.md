@@ -9,7 +9,7 @@ should be one Henry can explain and defend in an interview.
 - **Public landing page** (`/`): a single-page summary of career, headline results, research and
   education. This is what LinkedIn links to. It must persuade on its own.
 - **Protected role pages** (`/roles/*`): detailed write-ups of each role and project. Visitors get
-  access by entering their email address and clicking a one-time link sent to that address.
+  access by entering their email address and then a six-digit code emailed to it.
 - **Generated face** on the landing page: a face produced by a GAN, different on each load,
   visibly labelled as *not* a photo of Henry (see "Face image" below).
 - **Visitor log**: every successful sign-in is recorded (email, time) so Henry can see who looked.
@@ -36,22 +36,21 @@ SNS). Every other region is denied. Design within this; don't plan on changing t
   - `/api/*`: routed to API Gateway.
   - `/img/henry-ashton.jpg`: the face image (see below). Must not be cached.
 - **Auth API**: API Gateway HTTP API + Python Lambdas.
+  - Sign-in is by **six-digit code**, not link (`docs/decisions.md` #21).
   - `POST /api/auth/request` `{email}`: validate the email, rate-limit (per email and per IP),
-    generate a 32-byte random token, store **only its SHA-256 hash** in DynamoDB with a
-    30-minute TTL, and send the link `https://<domain>/api/auth/verify?token=...` with SES.
-    Always return the same generic response, whether or not the email is new, so the endpoint
-    can't be used to probe for addresses.
-  - `GET /api/auth/verify?token=...`: show a confirmation page whose button POSTs the
-    token. GET changes nothing, so mail scanners that prefetch links can't use the token up
-    (`docs/decisions.md` #15).
-  - `POST /api/auth/verify` `{token}`: hash the token, then do a **conditional delete** in
-    DynamoDB (single use, not expired). On success, write to the visitor log, issue CloudFront
-    signed cookies (valid 5 days) and redirect to `/roles/`. On failure, redirect to
-    `/login.html?expired=1`.
+    generate a random six-digit code, store **only its hash** in DynamoDB keyed by email
+    (replacing any earlier code) with a 10-minute expiry, and send it with SES. Always
+    return the same response, whether or not the email is new or rate-limited, so the
+    endpoint can't be used to probe for addresses.
+  - `POST /api/auth/verify` `{email, code}`: count the attempt atomically (at most 5 per
+    code, not expired), compare the hash, then **conditionally delete** the code so it works
+    once. On success, write to the visitor log, issue CloudFront signed cookies (valid 5
+    days) and redirect to `/roles/`. Wrong, expired, used and never-issued codes all get the
+    same response.
 - **Signing key** for the cookies: generate the key pair outside Terraform state if possible;
   store the private key in SSM Parameter Store (SecureString) or Secrets Manager; the public
   key goes in the CloudFront key group.
-- **DynamoDB**: `tokens` table (hash key = token hash, TTL attribute), `rate-limits` table
+- **DynamoDB**: `sign-in-codes` table (hash key = email, TTL attribute), `rate-limits` table
   (hashed keys, TTL) and `visitors` table (email, timestamps). On-demand billing.
 - **SES**: verify the domain with DKIM. Note: new SES accounts are in the **sandbox** and can
   only send to verified addresses. Request production access before going live.
@@ -111,7 +110,7 @@ SNS). Every other region is denied. Design within this; don't plan on changing t
 ## Open questions for Henry
 
 _Settled: domain `henryashton.dev` (registered at Namecheap, DNS in Route 53), canonical host
-`www.henryashton.dev` with the apex redirecting to it. Cookie lifetime 5 days; sign-in link
-expiry 30 minutes; sender `signin@henryashton.dev`._
+`www.henryashton.dev` with the apex redirecting to it. Cookie lifetime 5 days; sign-in code
+expiry 10 minutes, 6 digits, 5 attempts; sender `signin@henryashton.dev`._
 
 - Email address that should receive visitor notifications (step 5).

@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Enter your code · Henry Ashton</title>
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="/assets/site.css">
+  <script src="/assets/login.js" defer></script>
+</head>
+<body>
+  <main>
+    <h1>Check your email</h1>
+    <p class="lede">If the address can receive mail, a six-digit code is on its way. It expires after 10 minutes. You can enter it on any device.</p>
+
+    <p id="wrong" class="notice" role="alert" hidden>That code is wrong or has expired. Check it, or request a new one.</p>
+
+    <form method="post" action="/api/auth/verify">
+      <label for="email">Email address</label>
+      <input id="email" name="email" type="email" autocomplete="email" maxlength="254" required>
+      <label for="code">Code</label>
+      <input id="code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 \-]{6,8}" maxlength="8" required>
+      <button type="submit">Sign in</button>
+    </form>
+
+    <p class="note">Nothing after a few minutes? Check your spam folder, or <a href="/login.html">request another code</a>.</p>
+    <p><a href="/">Back to the summary</a></p>
+  </main>
+</body>
+</html>

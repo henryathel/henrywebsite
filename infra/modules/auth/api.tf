@@ -31,7 +31,7 @@ resource "aws_apigatewayv2_stage" "default" {
     throttling_rate_limit  = 5
   }
 
-  # $context.path excludes the query string, so sign-in tokens never reach the logs.
+  # Codes travel in POST bodies, which access logs never include.
   access_log_settings {
     destination_arn = aws_cloudwatch_log_group.api.arn
     format = jsonencode({
@@ -49,7 +49,6 @@ resource "aws_apigatewayv2_stage" "default" {
 locals {
   routes = {
     "POST /api/auth/request" = "request"
-    "GET /api/auth/verify"   = "verify"
     "POST /api/auth/verify"  = "verify"
   }
 }

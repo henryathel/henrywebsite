@@ -11,15 +11,15 @@
 <body>
   <main>
     <h1>Read the detailed write-ups</h1>
-    <p class="lede">Enter your email address and you'll get a one-time sign-in link. It expires after 30 minutes.</p>
+    <p class="lede">Enter your email address and you'll get a six-digit sign-in code.</p>
 
-    <p id="expired" class="notice" role="alert" hidden>That link has expired or has already been used. Enter your email address for a new one.</p>
+    <p id="expired" class="notice" role="alert" hidden>Please request a new code.</p>
     <p id="invalid" class="notice" role="alert" hidden>That doesn't look like an email address. Please check it and try again.</p>
 
     <form method="post" action="/api/auth/request">
       <label for="email">Email address</label>
       <input id="email" name="email" type="email" autocomplete="email" maxlength="254" required>
-      <button type="submit">Send link</button>
+      <button type="submit">Send code</button>
     </form>
 
     <p class="note">Your email address and the time you signed in are recorded so Henry can see who has read the write-ups.</p>

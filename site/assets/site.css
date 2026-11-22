@@ -42,7 +42,8 @@ hr { border: 0; border-top: 1px solid var(--rule); margin: 2.5rem 0; }
 
 form { display: grid; gap: 0.75rem; max-width: 24rem; }
 label { font-weight: 600; }
-input[type="email"] {
+input[type="email"],
+input[type="text"] {
   font: inherit;
   padding: 0.6rem 0.75rem;
   border: 1px solid var(--rule);
@@ -66,4 +67,10 @@ button {
   padding: 0.6rem 0.75rem;
   border-left: 3px solid var(--accent);
   background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+#code {
+  max-width: 10rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.15em;
 }

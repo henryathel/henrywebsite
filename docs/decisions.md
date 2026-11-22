@@ -128,6 +128,8 @@ to.
 
 ## 15. The emailed link confirms with a button; only the POST uses the token
 
+_Superseded by #21: sign-in now uses a code, so there is no link to prefetch._
+
 The brief had `GET /api/auth/verify` consume the token. Many corporate mail filters (such
 as Microsoft Defender Safe Links) fetch every link in an incoming email to scan it, which
 would use up a single-use link before a recruiter clicked it. So GET only returns a page
@@ -159,7 +161,7 @@ access to content. A Lambda authorizer or WAF would cost more for the same effec
 
 ## 18. Rate limits: DynamoDB counters plus API Gateway throttling
 
-Each request link is counted per email (3 an hour) and per IP (10 an hour; IPv6 by /64)
+Each code request is counted per email (3 an hour) and per IP (10 an hour; IPv6 by /64)
 with an atomic conditional `UpdateItem` on a fixed hourly window. Counter items expire
 through TTL. The email key is a hash, so that table holds no addresses. Over the limit,
 the response is the same "check your email" page as for success, so the endpoint reveals
@@ -170,8 +172,8 @@ account's sending reputation.
 ## 19. One reproducible package, two functions with separate roles
 
 Both functions ship the same zip but get different handlers, environment variables and IAM
-roles. The request function can put tokens, count attempts and send from
-`signin@henryashton.dev` only; the verify function can delete tokens, update the visitor
+roles. The request function can store codes, count requests and send from
+`signin@henryashton.dev` only; the verify function can count guesses and delete codes, update the visitor
 log and read the signing key. `lambdas/build.py` installs hash-locked arm64 wheels and
 writes a zip with fixed timestamps, permissions and ordering, dropping per-install pip
 metadata. A CI build and a local build hash identically, so `plan` only shows a function
@@ -185,3 +187,27 @@ DKIM, which satisfies the zone's strict DMARC policy. The MAIL FROM domain
 Bounces and complaints go to the SES account-level suppression list. New SES accounts are
 sandboxed (they can only send to verified addresses), so production access is requested
 before launch; `ses_test_recipients` verifies addresses for testing until then.
+
+## 21. Sign in with a six-digit code, not a link
+
+The emailed link (#15) worked, but had two problems for this audience. A recruiter may
+find the site at a desk and read the email on a phone; a link signs in whichever device
+opens it. And a secret in a URL ends up in browser history, synced tabs and chat previews.
+A code can be read on one device and typed on another, and nothing can prefetch it, so the
+confirmation page and the GET route went away.
+
+A code is guessable, so the limits carry the security, not the length. Each code allows 5
+attempts and expires after 10 minutes, and an address can get 3 codes an hour, so an
+attacker gets about 15 guesses an hour at a one-in-a-million code. Six digits is the
+length people can carry between devices and that phones offer as autofill. Verification
+counts the attempt (a conditional `UpdateItem`: not expired, under the limit) before
+comparing the hash, so concurrent guesses can't exceed the limit, then deletes the code
+conditionally on its hash so it works once. The table is keyed by email, so requesting a
+new code replaces the old one. Wrong, expired, used and never-issued codes get the same
+response, which reveals nothing about recent requests for an address.
+
+The stored hash includes the email address. It keeps codes unreadable at a glance, but a
+six-digit code's hash can be reversed by brute force, so it isn't a defence against someone
+who can read the table; that would need account access, and codes expire in minutes.
+The address reaches the code page in the URL fragment, which browsers never send to the
+server.

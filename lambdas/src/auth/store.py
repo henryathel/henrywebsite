@@ -1,5 +1,6 @@
-"""DynamoDB access: tokens, rate limits and the visitor log."""
+"""DynamoDB access: sign-in codes, rate limits and the visitor log."""
 
+import hmac
 from datetime import UTC, datetime
 from functools import cache
 from typing import TYPE_CHECKING
@@ -45,31 +46,53 @@ def allow(key: str, limit: int, window_seconds: int, now: int) -> bool:
     return True
 
 
-def save_token(token_hash: str, email: str, expires_at: int) -> None:
-    _table(settings().tokens_table).put_item(
-        Item={"token_hash": token_hash, "email": email, "expires_at": expires_at},
-        ConditionExpression="attribute_not_exists(token_hash)",
+def save_code(email: str, code_hash: str, expires_at: int) -> None:
+    """Store a new code, replacing any earlier one for this address and its attempts.
+
+    Replacing resets the attempt count, but new codes are themselves rate-limited per
+    address, which caps the guesses an attacker gets per hour.
+    """
+    _table(settings().codes_table).put_item(
+        Item={"email": email, "code_hash": code_hash, "attempts": 0, "expires_at": expires_at},
     )
 
 
-def consume_token(token_hash: str, now: int) -> str | None:
-    """Delete the token if it exists and hasn't expired, returning its email address.
+def use_code(email: str, code_hash: str, now: int, max_attempts: int) -> bool:
+    """True, exactly once, if `code_hash` matches the live code for `email`.
 
-    The conditional delete makes each link single-use even if it is opened twice at once.
-    DynamoDB's TTL deletes expired items only eventually, so expiry is checked here too.
+    The attempt is counted before the comparison, in one conditional update, so parallel
+    guesses can't exceed the limit. A match is then deleted conditionally, so two
+    simultaneous correct submissions can't both succeed. DynamoDB's TTL deletes expired
+    items only eventually, so expiry is checked here too.
     """
+    table = _table(settings().codes_table)
     try:
-        result = _table(settings().tokens_table).delete_item(
-            Key={"token_hash": token_hash},
-            ConditionExpression="attribute_exists(token_hash) AND expires_at > :now",
-            ExpressionAttributeValues={":now": now},
-            ReturnValues="ALL_OLD",
+        item = table.update_item(
+            Key={"email": email},
+            UpdateExpression="ADD attempts :one",
+            ConditionExpression="expires_at > :now AND attempts < :max",
+            ExpressionAttributeValues={":one": 1, ":now": now, ":max": max_attempts},
+            ReturnValues="ALL_NEW",
+        )["Attributes"]
+    except ClientError as error:
+        if _is_conditional_failure(error):
+            return False
+        raise
+
+    if not hmac.compare_digest(str(item["code_hash"]), code_hash):
+        return False
+
+    try:
+        table.delete_item(
+            Key={"email": email},
+            ConditionExpression="code_hash = :hash",
+            ExpressionAttributeValues={":hash": code_hash},
         )
     except ClientError as error:
         if _is_conditional_failure(error):
-            return None
+            return False
         raise
-    return str(result["Attributes"]["email"])
+    return True
 
 
 def record_visit(email: str, now: int) -> None:

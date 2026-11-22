@@ -1,4 +1,4 @@
-"""Sends the sign-in link with SES."""
+"""Sends the sign-in code with SES."""
 
 from functools import cache
 from typing import TYPE_CHECKING
@@ -11,17 +11,19 @@ from auth.config import required, settings
 if TYPE_CHECKING:
     from mypy_boto3_sesv2 import SESV2Client
 
-SUBJECT = "Your sign-in link for henryashton.dev"
+# The code is in the subject so it shows in notifications, for reading on a phone and
+# typing on another device.
+SUBJECT = "{code} is your sign-in code for henryashton.dev"
 
 BODY = """\
 Hello,
 
-Use this link to read Henry Ashton's detailed role write-ups:
+Your code for reading Henry Ashton's detailed role write-ups is:
 
-{link}
+{code}
 
-It works once and expires in {minutes} minutes. If you didn't ask for it, you can ignore
-this email.
+Enter it on the sign-in page. It works once and expires in {minutes} minutes. If you
+didn't ask for it, you can ignore this email.
 
 This mailbox doesn't receive replies.
 """
@@ -32,17 +34,17 @@ def _ses() -> "SESV2Client":
     return boto3.client("sesv2")
 
 
-def send_link(to: str, link: str) -> None:
+def send_code(to: str, code: str) -> None:
     config = settings()
     _ses().send_email(
         FromEmailAddress=required(config.sender, "SENDER"),
         Destination={"ToAddresses": [to]},
         Content={
             "Simple": {
-                "Subject": {"Data": SUBJECT, "Charset": "UTF-8"},
+                "Subject": {"Data": SUBJECT.format(code=code), "Charset": "UTF-8"},
                 "Body": {
                     "Text": {
-                        "Data": BODY.format(link=link, minutes=config.token_ttl_seconds // 60),
+                        "Data": BODY.format(code=code, minutes=config.code_ttl_seconds // 60),
                         "Charset": "UTF-8",
                     }
                 },

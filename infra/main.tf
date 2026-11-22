@@ -29,7 +29,7 @@ module "auth" {
   lambda_package         = "${path.root}/../lambdas/dist/auth.zip"
   signing_public_key_pem = file("${path.root}/keys/cookie-signing-public.pem")
   signing_key_parameter  = var.signing_key_parameter
-  token_ttl_minutes      = var.token_ttl_minutes
+  code_ttl_minutes       = var.code_ttl_minutes
   cookie_ttl_days        = var.cookie_ttl_days
   ses_test_recipients    = var.ses_test_recipients
 }

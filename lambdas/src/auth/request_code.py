@@ -1,4 +1,4 @@
-"""POST /api/auth/request: email a one-time sign-in link.
+"""POST /api/auth/request: email a six-digit sign-in code.
 
 Every outcome except a malformed address gets the same redirect, so the endpoint can't be
 used to find out which addresses have signed in before or have been rate-limited.
@@ -11,20 +11,28 @@ from typing import Any
 from botocore.exceptions import ClientError
 from pydantic import ValidationError
 
+from auth.codes import code_hash, email_id, new_code
 from auth.config import settings
-from auth.http import Event, Response, forbidden, form_fields, from_cloudfront, redirect, viewer_ip
-from auth.mailer import send_link
+from auth.http import (
+    Event,
+    Response,
+    code_page,
+    forbidden,
+    form_fields,
+    from_cloudfront,
+    redirect,
+    viewer_ip,
+)
+from auth.mailer import send_code
 from auth.models import SignInRequest
-from auth.store import allow, save_token
-from auth.tokens import email_id, new_token, token_hash
+from auth.store import allow, save_code
 
 logger = logging.getLogger(__name__)
 
-SENT_PAGE = "/login-sent.html"
 INVALID_PAGE = "/login.html?invalid=1"
 
 HOUR = 3600
-EMAIL_LIMIT = 3  # links per address per hour
+EMAIL_LIMIT = 3  # codes per address per hour
 IP_LIMIT = 10  # requests per address (or IPv6 /64) per hour
 
 
@@ -47,15 +55,15 @@ def handler(event: Event, context: Any) -> Response:  # noqa: ANN401
         f"email#{who}", EMAIL_LIMIT, HOUR, now
     ):
         logger.warning("rate limited", extra={"email_id": who, "ip": ip})
-        return redirect(SENT_PAGE)
+        return redirect(code_page(request.email))
 
-    token = new_token()
-    save_token(token_hash(token), request.email, now + config.token_ttl_seconds)
+    code = new_code()
+    save_code(request.email, code_hash(request.email, code), now + config.code_ttl_seconds)
     try:
-        send_link(request.email, f"{config.site_url}/api/auth/verify?token={token}")
+        send_code(request.email, code)
     except ClientError:
         # Still the generic response; the log is where a sending problem shows up.
-        logger.exception("failed to send sign-in link", extra={"email_id": who})
+        logger.exception("failed to send sign-in code", extra={"email_id": who})
     else:
-        logger.info("sign-in link sent", extra={"email_id": who})
-    return redirect(SENT_PAGE)
+        logger.info("sign-in code sent", extra={"email_id": who})
+    return redirect(code_page(request.email))

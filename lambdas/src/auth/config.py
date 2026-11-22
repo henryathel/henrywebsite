@@ -9,8 +9,8 @@ from pydantic import BaseModel, Field
 class Settings(BaseModel):
     site_url: str = Field(pattern=r"^https://[a-z0-9.-]+$")
     origin_secret: str = Field(min_length=32)
-    tokens_table: str
-    token_ttl_seconds: int = Field(gt=0)
+    codes_table: str
+    code_ttl_seconds: int = Field(gt=0)
     # Only the function that needs each resource is given its environment variable.
     rate_limits_table: str | None = None
     visitors_table: str | None = None

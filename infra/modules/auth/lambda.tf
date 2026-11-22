@@ -6,17 +6,17 @@ locals {
   site_url = "https://www.${var.domain_name}"
 
   common_environment = {
-    SITE_URL          = local.site_url
-    ORIGIN_SECRET     = random_password.origin_secret.result
-    TOKENS_TABLE      = aws_dynamodb_table.tokens.name
-    TOKEN_TTL_SECONDS = tostring(var.token_ttl_minutes * 60)
+    SITE_URL         = local.site_url
+    ORIGIN_SECRET    = random_password.origin_secret.result
+    CODES_TABLE      = aws_dynamodb_table.codes.name
+    CODE_TTL_SECONDS = tostring(var.code_ttl_minutes * 60)
   }
 
   # Each function gets only the settings, and (below) the permissions, it uses.
   functions = {
     request = {
-      handler     = "auth.request_link.handler"
-      description = "POST /api/auth/request: email a one-time sign-in link"
+      handler     = "auth.request_code.handler"
+      description = "POST /api/auth/request: email a six-digit sign-in code"
       policy      = data.aws_iam_policy_document.request.json
       environment = {
         RATE_LIMITS_TABLE = aws_dynamodb_table.rate_limits.name
@@ -24,8 +24,8 @@ locals {
       }
     }
     verify = {
-      handler     = "auth.verify_link.handler"
-      description = "/api/auth/verify: exchange a sign-in link for signed cookies"
+      handler     = "auth.verify_code.handler"
+      description = "POST /api/auth/verify: exchange a sign-in code for signed cookies"
       policy      = data.aws_iam_policy_document.verify.json
       environment = {
         VISITORS_TABLE        = aws_dynamodb_table.visitors.name
@@ -64,9 +64,9 @@ data "aws_iam_policy_document" "request" {
   }
 
   statement {
-    sid       = "StoreToken"
+    sid       = "StoreCode"
     actions   = ["dynamodb:PutItem"]
-    resources = [aws_dynamodb_table.tokens.arn]
+    resources = [aws_dynamodb_table.codes.arn]
   }
 
   statement {
@@ -100,10 +100,11 @@ data "aws_iam_policy_document" "verify" {
     resources = ["${local.log_group_arn_prefix}-verify:*"]
   }
 
+  # Count an attempt, then delete the code once it matches.
   statement {
-    sid       = "ConsumeToken"
-    actions   = ["dynamodb:DeleteItem"]
-    resources = [aws_dynamodb_table.tokens.arn]
+    sid       = "UseCode"
+    actions   = ["dynamodb:UpdateItem", "dynamodb:DeleteItem"]
+    resources = [aws_dynamodb_table.codes.arn]
   }
 
   statement {
