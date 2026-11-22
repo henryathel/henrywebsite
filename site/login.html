@@ -6,16 +6,19 @@
   <title>Sign in · Henry Ashton</title>
   <meta name="robots" content="noindex">
   <link rel="stylesheet" href="/assets/site.css">
+  <script src="/assets/login.js" defer></script>
 </head>
 <body>
   <main>
     <h1>Read the detailed write-ups</h1>
-    <p class="lede">Enter your email address and you'll get a one-time sign-in link. It expires after 15 minutes.</p>
+    <p class="lede">Enter your email address and you'll get a one-time sign-in link. It expires after 30 minutes.</p>
 
-    <!-- Placeholder: the sign-in API arrives in step 3. -->
+    <p id="expired" class="notice" role="alert" hidden>That link has expired or has already been used. Enter your email address for a new one.</p>
+    <p id="invalid" class="notice" role="alert" hidden>That doesn't look like an email address. Please check it and try again.</p>
+
     <form method="post" action="/api/auth/request">
       <label for="email">Email address</label>
-      <input id="email" name="email" type="email" autocomplete="email" required>
+      <input id="email" name="email" type="email" autocomplete="email" maxlength="254" required>
       <button type="submit">Send link</button>
     </form>
 

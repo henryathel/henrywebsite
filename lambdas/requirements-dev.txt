@@ -1,0 +1,122 @@
+annotated-types==0.8.0
+    # via pydantic
+ast-serialize==0.13.1
+    # via mypy
+boto3==1.44.9
+    # via
+    #   henrywebsite-auth (pyproject.toml)
+    #   moto
+boto3-stubs==1.44.9
+    # via henrywebsite-auth (pyproject.toml)
+botocore==1.44.9
+    # via
+    #   boto3
+    #   moto
+    #   s3transfer
+botocore-stubs==1.43.126
+    # via boto3-stubs
+certifi==2026.11.20
+    # via requests
+cffi==2.1.1 ; platform_python_implementation != 'PyPy'
+    # via cryptography
+charset-normalizer==3.5.2
+    # via requests
+colorama==0.4.6 ; sys_platform == 'win32'
+    # via pytest
+cryptography==50.0.2
+    # via
+    #   henrywebsite-auth (pyproject.toml)
+    #   moto
+dnspython==2.9.2
+    # via email-validator
+docker==7.2.0
+    # via moto
+email-validator==2.4.0
+    # via henrywebsite-auth (pyproject.toml)
+idna==3.20
+    # via
+    #   email-validator
+    #   requests
+iniconfig==2.3.1
+    # via pytest
+jmespath==1.1.0
+    # via
+    #   boto3
+    #   botocore
+librt==0.17.0 ; platform_python_implementation != 'PyPy'
+    # via mypy
+markupsafe==3.0.4
+    # via werkzeug
+moto==5.2.5
+    # via henrywebsite-auth (pyproject.toml)
+mypy==2.4.1
+    # via henrywebsite-auth (pyproject.toml)
+mypy-boto3-dynamodb==1.44.0
+    # via boto3-stubs
+mypy-boto3-sesv2==1.44.6
+    # via boto3-stubs
+mypy-boto3-ssm==1.44.8
+    # via boto3-stubs
+mypy-extensions==1.2.0
+    # via
+    #   librt
+    #   mypy
+packaging==26.3
+    # via pytest
+pathspec==1.1.1
+    # via mypy
+pluggy==1.7.0
+    # via pytest
+py-partiql-parser==0.6.3
+    # via moto
+pycparser==3.12 ; implementation_name != 'PyPy' and platform_python_implementation != 'PyPy'
+    # via cffi
+pydantic==2.14.4
+    # via henrywebsite-auth (pyproject.toml)
+pydantic-core==2.50.5
+    # via pydantic
+pygments==2.21.0
+    # via pytest
+pytest==9.2.0
+    # via henrywebsite-auth (pyproject.toml)
+python-dateutil==2.9.0.post0
+    # via botocore
+pywin32==312 ; sys_platform == 'win32'
+    # via docker
+pyyaml==6.0.4
+    # via
+    #   moto
+    #   responses
+requests==2.34.2
+    # via
+    #   docker
+    #   moto
+    #   responses
+responses==0.26.3
+    # via moto
+ruff==0.17.6
+    # via henrywebsite-auth (pyproject.toml)
+s3transfer==0.19.3
+    # via boto3
+six==1.17.0
+    # via python-dateutil
+types-s3transfer==0.19.3
+    # via boto3-stubs
+typing-extensions==4.16.0
+    # via
+    #   mypy
+    #   pydantic
+    #   pydantic-core
+    #   typing-inspection
+typing-inspection==0.4.5
+    # via pydantic
+urllib3==2.8.0
+    # via
+    #   botocore
+    #   docker
+    #   requests
+    #   responses
+werkzeug==3.1.9
+    # via moto
+xmltodict==1.0.4
+    # via moto

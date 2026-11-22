@@ -8,3 +8,7 @@ updates:
     directories: [/bootstrap, /infra]
     schedule:
       interval: monthly
+  - package-ecosystem: pip
+    directory: /lambdas
+    schedule:
+      interval: monthly

@@ -10,7 +10,8 @@ load. All infrastructure is Terraform; see `docs/decisions.md` for the reasoning
 | --- | --- |
 | `bootstrap/` | One-off stack creating the Terraform state bucket |
 | `infra/` | Root module; `infra/modules/{ci,site,auth,faces}` |
-| `lambdas/` | Python auth Lambdas (step 3) |
+| `lambdas/` | Python auth Lambdas; `build.py` makes the deployment zip |
+| `scripts/` | One-off helpers, such as creating the cookie-signing key |
 | `site/` | Public pages and placeholder role pages |
 | `.github/workflows/` | `pr.yml` (checks and plan), `deploy.yml` (site content) |
 
@@ -18,7 +19,7 @@ Real role write-ups are kept in the private `henrywebsite-content` repository.
 
 ## First-time setup
 
-Needs Terraform 1.17 and AWS CLI 2.32+. Sign in with `aws login --profile henrywebsite`
+Needs Terraform 1.17, Python 3.12 and AWS CLI 2.32+. Sign in with `aws login --profile henrywebsite`
 (see `docs/decisions.md` #9), and run Terraform with `AWS_PROFILE=henrywebsite`.
 
 1. **State bucket.** `bootstrap/main.tf` already declares the S3 backend, which can't be
@@ -42,6 +43,21 @@ Needs Terraform 1.17 and AWS CLI 2.32+. Sign in with `aws login --profile henryw
    `terraform init -backend-config=../infra/backend.hcl`.
 
 2. **Infrastructure**
+
+   Create the cookie-signing key once. The private key goes straight into SSM; commit the
+   public key it writes to `infra/keys/` (see `docs/decisions.md` #16):
+
+   ```sh
+   AWS_PROFILE=henrywebsite scripts/create-signing-key.sh
+   ```
+
+   Build the Lambda package. Terraform hashes it, so rebuild before every plan or apply:
+
+   ```sh
+   (cd lambdas && python3.12 build.py)
+   ```
+
+   Then:
 
    ```sh
    cd infra
@@ -67,6 +83,16 @@ Needs Terraform 1.17 and AWS CLI 2.32+. Sign in with `aws login --profile henryw
    `terraform apply`. ACM validation and the CloudFront distribution each take several
    minutes.
 
+   While SES is in its sandbox, sign-in mail only reaches verified addresses. To test,
+   list yours in `infra/terraform.tfvars` (git-ignored) and click the link SES emails:
+
+   ```hcl
+   ses_test_recipients = ["you@example.com"]
+   ```
+
+   For real visitors, request SES production access (SES console in `eu-north-1` →
+   **Account dashboard** → **Request production access**).
+
 3. **GitHub repository variables** (Settings → Secrets and variables → Actions → Variables)
 
    - `AWS_PLAN_ROLE_ARN`: the `plan_role_arn` output
@@ -75,7 +101,28 @@ Needs Terraform 1.17 and AWS CLI 2.32+. Sign in with `aws login --profile henryw
    - `SITE_BUCKET`: the `site_bucket` output
    - `CLOUDFRONT_DISTRIBUTION_ID`: the `cloudfront_distribution_id` output
 
+   In the private `henrywebsite-content` repository:
+
+   - `AWS_CONTENT_DEPLOY_ROLE_ARN`: the `content_deploy_role_arn` output
+   - `ROLES_BUCKET`: the `roles_bucket` output
+   - `CLOUDFRONT_DISTRIBUTION_ID`: as above
+
 ## Day to day
 
-Open a PR: CI checks formatting, validates, plans and runs checkov. Merge, then run
-`terraform apply` in `infra/` locally. CI never applies infrastructure.
+Open a PR: CI checks formatting, validates, plans and runs checkov, and lints, type-checks
+and tests the Lambdas. Merge, then build the Lambda package and run `terraform apply` in
+`infra/` locally. CI never applies infrastructure.
+
+Lambda development, from `lambdas/`:
+
+```sh
+uv venv -p 3.12 && uv pip install -r requirements-dev.txt
+.venv/bin/pytest && .venv/bin/mypy && .venv/bin/ruff check .
+```
+
+After changing dependencies in `pyproject.toml`, regenerate both lock files:
+
+```sh
+uv pip compile pyproject.toml --python-platform aarch64-manylinux2014 --python-version 3.12 --generate-hashes --no-header -o requirements.txt
+uv pip compile pyproject.toml --extra dev --python-version 3.12 --universal --no-header -o requirements-dev.txt
+```

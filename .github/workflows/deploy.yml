@@ -28,8 +28,9 @@ jobs:
         with:
           role-to-assume: ${{ vars.AWS_SITE_DEPLOY_ROLE_ARN }}
           aws-region: eu-north-1
-      # roles/ is owned by the private content repo and faces/ by the face pipeline;
-      # excluding them stops --delete from removing their objects.
+      # faces/ is owned by the face pipeline; excluding it stops --delete removing its
+      # objects. site/roles/ holds placeholders only: real role pages live in a separate
+      # bucket, deployed from the private content repo.
       - name: sync
         run: >
           aws s3 sync site/ "s3://${{ vars.SITE_BUCKET }}/"

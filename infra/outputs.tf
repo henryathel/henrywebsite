@@ -8,6 +8,16 @@ output "site_deploy_role_arn" {
   value       = module.ci.site_deploy_role_arn
 }
 
+output "content_deploy_role_arn" {
+  description = "Set as the AWS_CONTENT_DEPLOY_ROLE_ARN variable in the henrywebsite-content repo."
+  value       = module.ci.content_deploy_role_arn
+}
+
+output "roles_bucket" {
+  description = "Set as the ROLES_BUCKET variable in the henrywebsite-content repo."
+  value       = module.site.roles_bucket_name
+}
+
 output "site_bucket" {
   description = "Set as the SITE_BUCKET repository variable in GitHub."
   value       = module.site.bucket_name

@@ -7,8 +7,8 @@ Short records of significant choices and why. Newest last.
 The infrastructure repo is public so the engineering can be read as a portfolio piece.
 Committing the `/roles/*` write-ups there would publish the content the sign-in exists to
 protect, so they live in a private `henrywebsite-content` repo. Its own workflow syncs them
-to `roles/` in the site bucket using an OIDC role that can only write that prefix. The
-public repo holds only placeholder role pages, and its deploy excludes `roles/*`.
+to a separate roles bucket (#14) using an OIDC role that can only write `roles/` there. The
+public repo holds only placeholder role pages, which are never deployed.
 
 ## 2. Terraform is applied locally, never from CI
 
@@ -112,6 +112,76 @@ so every missing page would wrongly show the login page. Granting CloudFront
 
 ## 13. Real role content isn't published until `/roles/*` is protected
 
-The private content repo's deploy workflow and role arrive in step 3, together with the
-signed-cookie protection. Until then nothing writes to `roles/`, and the public deploy role
-is explicitly denied `roles/*` and `faces/*` in IAM, not just excluded in the workflow.
+The private content repo's deploy role arrived in step 3, together with the signed-cookie
+protection, so nothing could publish role pages before they were protected.
+
+## 14. Role pages live in their own bucket
+
+The `/roles/*` behaviour requires signed cookies, but CloudFront picks a behaviour from the
+path as received, and the default behaviour's function then rewrites paths (`/roles` would
+become `/roles/index.html`). If role pages shared the public bucket, any path that reached
+the default behaviour but resolved to a `roles/` key in S3 would serve them without a
+cookie. Instead they live in a separate private bucket that is the origin only for
+`/roles/*`. No path through any other behaviour can reach it, so protection doesn't depend
+on getting path matching exactly right. It also gives each deploy role one bucket to write
+to.
+
+## 15. The emailed link confirms with a button; only the POST uses the token
+
+The brief had `GET /api/auth/verify` consume the token. Many corporate mail filters (such
+as Microsoft Defender Safe Links) fetch every link in an incoming email to scan it, which
+would use up a single-use link before a recruiter clicked it. So GET only returns a page
+with a "Sign in" button. That button POSTs the token, and only the POST deletes it,
+sets the cookies and logs the visit. The token is consumed by a conditional `DeleteItem`
+(`attribute_exists AND expires_at > now`), so it works once even when two requests race.
+Expiry is checked in that condition because DynamoDB TTL deletes items only eventually.
+
+## 16. The cookie-signing key is created outside Terraform
+
+Terraform stores resource values in state, which the plan role can read. A
+`tls_private_key` resource would put the signing key there. Instead,
+`scripts/create-signing-key.sh` generates the key pair locally and writes the private key
+straight to an SSM SecureString, then deletes it; only the public key is committed and
+managed by Terraform (CloudFront public key and key group). The verify function reads the
+parameter once per container. The parameter is the one auth resource Terraform doesn't
+manage, deliberately. Signatures are RSA with SHA-1 because that is what CloudFront
+verifies; SHA-1's weakness is collisions, which don't help forge a signature over a policy
+we chose.
+
+## 17. API reachable only through CloudFront, checked by a secret header
+
+The HTTP API's execute-api URL is public. CloudFront adds an `X-Origin-Verify` header with
+a random value, and both functions return 403 without it. Besides stopping direct calls,
+this makes the `CloudFront-Viewer-Address` header trustworthy: per-IP rate limits rely on
+it, and anyone could forge it on a direct call. The value is in Terraform state and the
+function environment; that's acceptable because it only gates rate-limit bypass, not
+access to content. A Lambda authorizer or WAF would cost more for the same effect.
+
+## 18. Rate limits: DynamoDB counters plus API Gateway throttling
+
+Each request link is counted per email (3 an hour) and per IP (10 an hour; IPv6 by /64)
+with an atomic conditional `UpdateItem` on a fixed hourly window. Counter items expire
+through TTL. The email key is a hash, so that table holds no addresses. Over the limit,
+the response is the same "check your email" page as for success, so the endpoint reveals
+nothing about which addresses are in use. The API stage also throttles overall (5 requests
+a second, burst 10) as a cost ceiling. Together these bound SES sending and protect the
+account's sending reputation.
+
+## 19. One reproducible package, two functions with separate roles
+
+Both functions ship the same zip but get different handlers, environment variables and IAM
+roles. The request function can put tokens, count attempts and send from
+`signin@henryashton.dev` only; the verify function can delete tokens, update the visitor
+log and read the signing key. `lambdas/build.py` installs hash-locked arm64 wheels and
+writes a zip with fixed timestamps, permissions and ordering, dropping per-install pip
+metadata. A CI build and a local build hash identically, so `plan` only shows a function
+change when the code or its dependencies change.
+
+## 20. SES: domain identity with DKIM and a custom MAIL FROM domain
+
+Mail is sent from `signin@henryashton.dev` through a domain identity with 2048-bit Easy
+DKIM, which satisfies the zone's strict DMARC policy. The MAIL FROM domain
+`mail.henryashton.dev` aligns SPF too and receives bounces, since the apex has a null MX.
+Bounces and complaints go to the SES account-level suppression list. New SES accounts are
+sandboxed (they can only send to verified addresses), so production access is requested
+before launch; `ses_test_recipients` verifies addresses for testing until then.

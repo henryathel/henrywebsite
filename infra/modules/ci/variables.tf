@@ -23,6 +23,16 @@ variable "infra_repo_id" {
   type        = number
 }
 
+variable "content_repo" {
+  description = "Private repository holding the role write-ups; its main branch may assume the content deploy role."
+  type        = string
+}
+
+variable "content_repo_id" {
+  description = "Numeric ID of the content repository; part of the immutable OIDC subject."
+  type        = number
+}
+
 variable "state_bucket_name" {
   description = "S3 bucket holding Terraform state."
   type        = string
@@ -41,5 +51,10 @@ variable "site_bucket_arn" {
 
 variable "distribution_arn" {
   description = "ARN of the CloudFront distribution the deploy role may invalidate."
+  type        = string
+}
+
+variable "roles_bucket_arn" {
+  description = "ARN of the bucket holding the protected role write-ups."
   type        = string
 }

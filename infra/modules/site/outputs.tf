@@ -9,13 +9,23 @@ output "name_servers" {
 }
 
 output "bucket_name" {
-  description = "Private bucket holding the site content."
-  value       = aws_s3_bucket.site.bucket
+  description = "Private bucket holding the public site content."
+  value       = aws_s3_bucket.this["site"].bucket
 }
 
 output "bucket_arn" {
   description = "ARN of the site bucket."
-  value       = aws_s3_bucket.site.arn
+  value       = aws_s3_bucket.this["site"].arn
+}
+
+output "roles_bucket_name" {
+  description = "Private bucket holding the protected role write-ups."
+  value       = aws_s3_bucket.this["roles"].bucket
+}
+
+output "roles_bucket_arn" {
+  description = "ARN of the roles bucket."
+  value       = aws_s3_bucket.this["roles"].arn
 }
 
 output "distribution_id" {

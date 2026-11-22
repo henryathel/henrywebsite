@@ -12,3 +12,8 @@ output "site_deploy_role_arn" {
   description = "Role assumed by the deploy workflow on main."
   value       = aws_iam_role.site_deploy.arn
 }
+
+output "content_deploy_role_arn" {
+  description = "Role assumed by the content repo's deploy workflow on main."
+  value       = aws_iam_role.content_deploy.arn
+}
