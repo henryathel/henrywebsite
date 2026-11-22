@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in · Henry Ashton</title>
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+  <main>
+    <h1>Read the detailed write-ups</h1>
+    <p class="lede">Enter your email address and you'll get a one-time sign-in link. It expires after 15 minutes.</p>
+
+    <!-- Placeholder: the sign-in API arrives in step 3. -->
+    <form method="post" action="/api/auth/request">
+      <label for="email">Email address</label>
+      <input id="email" name="email" type="email" autocomplete="email" required>
+      <button type="submit">Send link</button>
+    </form>
+
+    <p class="note">Your email address and the time you signed in are recorded so Henry can see who has read the write-ups.</p>
+    <p><a href="/">Back to the summary</a></p>
+  </main>
+</body>
+</html>

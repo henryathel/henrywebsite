@@ -53,10 +53,27 @@ Needs Terraform 1.17 and AWS CLI 2.32+. Sign in with `aws login --profile henryw
    If the account already has a GitHub OIDC provider, pass
    `-var github_oidc_provider_arn=<arn>` instead of creating a second one.
 
+   The certificate can't validate until the domain's DNS points at Route 53, so the first
+   apply happens in two stages:
+
+   ```sh
+   terraform apply -target=module.site.aws_route53_zone.this
+   terraform output name_servers
+   ```
+
+   At Namecheap: **Domain List** → the domain → **Manage** → **Nameservers** → **Custom
+   DNS**, and enter the four nameservers. Wait until
+   `dig +short NS henryashton.dev @1.1.1.1` returns them, then run the full
+   `terraform apply`. ACM validation and the CloudFront distribution each take several
+   minutes.
+
 3. **GitHub repository variables** (Settings → Secrets and variables → Actions → Variables)
 
    - `AWS_PLAN_ROLE_ARN`: the `plan_role_arn` output
    - `TF_STATE_BUCKET`: the bootstrap `state_bucket_name` output
+   - `AWS_SITE_DEPLOY_ROLE_ARN`: the `site_deploy_role_arn` output
+   - `SITE_BUCKET`: the `site_bucket` output
+   - `CLOUDFRONT_DISTRIBUTION_ID`: the `cloudfront_distribution_id` output
 
 ## Day to day
 

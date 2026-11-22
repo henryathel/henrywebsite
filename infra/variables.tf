@@ -39,3 +39,9 @@ variable "github_oidc_provider_arn" {
   type        = string
   default     = null
 }
+
+variable "domain_name" {
+  description = "Apex domain; the site is served at www.<domain_name>."
+  type        = string
+  default     = "henryashton.dev"
+}

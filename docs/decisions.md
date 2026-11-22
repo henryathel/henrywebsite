@@ -82,3 +82,36 @@ The AWS CLI's `configure sso` cannot see accounts granted this way, so CLI crede
 from `aws login` (CLI 2.32+), which turns the console session into short-lived credentials.
 No IAM users or access keys exist in the account. Member-account root credentials are
 managed centrally by the organization and are deleted.
+
+## 10. DNS delegated from Namecheap to Route 53
+
+The domain stays registered at Namecheap, but its nameservers point at a Route 53 hosted
+zone, so every record is in Terraform: certificate validation, the CloudFront aliases, and
+later the SES DKIM records. Route 53 alias records also let the bare domain point at
+CloudFront, which a CNAME can't. Cost is $0.50 a month. The zone adds a CAA record (only
+Amazon may issue certificates) and, because the domain receives no mail, a null MX,
+`v=spf1 -all` and DMARC `p=reject` so nobody can convincingly send mail as it. SES mail in
+step 3 still passes DMARC through DKIM.
+
+## 11. One distribution for both names; apex redirected by a CloudFront Function
+
+`www.henryashton.dev` is canonical. Rather than a second distribution or an S3 website
+bucket for the redirect, both names are aliases of one distribution and a viewer-request
+CloudFront Function returns a 301 for the apex, keeping the path and query string. The
+same function maps `/dir/` to `/dir/index.html`, which a private S3 origin doesn't do on
+its own. CloudFront Functions cost a fraction of Lambda@Edge, and Lambda@Edge isn't
+allowed by the org SCP anyway (decision 8).
+
+## 12. CloudFront may list the bucket, so missing pages are 404s
+
+With only `s3:GetObject`, S3 answers 403 for a missing object. Step 3 maps 403 to the
+login page for `/roles/*`, and CloudFront error responses apply to the whole distribution,
+so every missing page would wrongly show the login page. Granting CloudFront
+`s3:ListBucket` makes missing objects 404s, which get a 404 page, and leaves 403 meaning
+"not signed in".
+
+## 13. Real role content isn't published until `/roles/*` is protected
+
+The private content repo's deploy workflow and role arrive in step 3, together with the
+signed-cookie protection. Until then nothing writes to `roles/`, and the public deploy role
+is explicitly denied `roles/*` and `faces/*` in IAM, not just excluded in the workflow.

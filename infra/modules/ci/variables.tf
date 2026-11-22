@@ -33,3 +33,13 @@ variable "github_oidc_provider_arn" {
   type        = string
   default     = null
 }
+
+variable "site_bucket_arn" {
+  description = "ARN of the site bucket the deploy role writes to."
+  type        = string
+}
+
+variable "distribution_arn" {
+  description = "ARN of the CloudFront distribution the deploy role may invalidate."
+  type        = string
+}

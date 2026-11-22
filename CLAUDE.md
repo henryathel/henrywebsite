@@ -106,6 +106,8 @@ SNS). Every other region is denied. Design within this; don't plan on changing t
 
 ## Open questions for Henry
 
-- Domain name, and whether it's already registered (Route 53 or elsewhere).
+_Settled: domain `henryashton.dev` (registered at Namecheap, DNS in Route 53), canonical host
+`www.henryashton.dev` with the apex redirecting to it._
+
 - Email address that should receive visitor notifications.
 - Cookie lifetime (default 7 days) and token expiry (default 15 minutes).
