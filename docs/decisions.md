@@ -62,3 +62,18 @@ resources go in `eu-north-1`, and the CloudFront certificate in `us-east-1`. Pag
 served from CloudFront edge locations, so the region only adds a few tens of milliseconds
 to the sign-in API calls from the UK, and data stays in the EU. One consequence: the random
 face must use a CloudFront Function, because Lambda@Edge needs Lambda in `us-east-1`.
+
+## 9. Human access: account access app, `aws login`, no long-lived keys
+
+The organization was created by an AWS-managed setup that runs IAM Identity Center with
+permission sets disabled. Instead, an "AWS account access" application signs users in to
+each account by assuming a role there that trusts `account-access.amazonaws.com`. The site
+account was created directly through Organizations, so it lacked that role; it was created
+by hand as `henrywebsite-sso-admin` (AdministratorAccess, trusted only by that service).
+This is the one IAM resource in the account not created by Terraform, because Terraform
+cannot run before someone can sign in.
+
+The AWS CLI's `configure sso` cannot see accounts granted this way, so CLI credentials come
+from `aws login` (CLI 2.32+), which turns the console session into short-lived credentials.
+No IAM users or access keys exist in the account. Member-account root credentials are
+managed centrally by the organization and are deleted.
