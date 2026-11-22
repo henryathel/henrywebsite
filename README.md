@@ -36,7 +36,7 @@ Needs AWS credentials with admin rights in your shell, Terraform 1.17.
    terraform {
      backend "s3" {
        key          = "bootstrap/terraform.tfstate"
-       region       = "eu-west-2"
+       region       = "eu-north-1"
        encrypt      = true
        use_lockfile = true
      }
