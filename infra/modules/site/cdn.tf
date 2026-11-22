@@ -106,7 +106,12 @@ moved {
 }
 
 # Only what the auth API uses: the form body's content type and the viewer's IP address
-# for rate limiting. No cookies or query strings.
+# for rate limiting. No query strings.
+#
+# Cookies must be forwarded even though the API ignores them: with cookie forwarding off,
+# CloudFront also strips Set-Cookie from origin responses, which drops the signed cookies
+# the verify function issues. Forwarding them exposes nothing: those cookies are scoped to
+# Path=/roles/, so browsers never send them to /api/*, and the API isn't cached.
 resource "aws_cloudfront_origin_request_policy" "api" {
   name    = "${var.project}-auth-api"
   comment = "Forward to the auth API only what it reads"
@@ -123,7 +128,7 @@ resource "aws_cloudfront_origin_request_policy" "api" {
   }
 
   cookies_config {
-    cookie_behavior = "none"
+    cookie_behavior = "all"
   }
 }
 

@@ -136,11 +136,18 @@ data "aws_iam_policy_document" "plan" {
     resources = ["arn:${local.partition}:cloudfront::${local.account_id}:*"]
   }
 
-  # GetPublicKey doesn't support resource-level permissions, so it can only be granted on
-  # "*". It returns public keys only.
+  # These CloudFront actions have no resource types in the IAM reference, so they can only
+  # be granted on "*". They return public keys, key group membership and monitoring
+  # settings: nothing secret.
   statement {
-    sid       = "CloudFrontPublicKeyRead"
-    actions   = ["cloudfront:GetPublicKey"]
+    sid = "CloudFrontUnscopedRead"
+    actions = [
+      "cloudfront:GetKeyGroup",
+      "cloudfront:GetKeyGroupConfig",
+      "cloudfront:GetMonitoringSubscription",
+      "cloudfront:GetPublicKey",
+      "cloudfront:GetPublicKeyConfig",
+    ]
     resources = ["*"]
   }
 

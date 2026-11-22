@@ -211,3 +211,12 @@ six-digit code's hash can be reversed by brute force, so it isn't a defence agai
 who can read the table; that would need account access, and codes expire in minutes.
 The address reaches the code page in the URL fragment, which browsers never send to the
 server.
+
+## 22. The API behaviour forwards cookies, though the API ignores them
+
+With cookie forwarding set to none, CloudFront also removes `Set-Cookie` headers from
+origin responses, so the signed cookies from the verify function never reached the
+browser: sign-in succeeded but `/roles/` still returned 403. Least privilege pointed the
+wrong way here. The `/api/*` origin request policy now forwards all cookies. That shares
+nothing: the signed cookies are scoped to `Path=/roles/`, so browsers don't send them to
+`/api/*`, and the API isn't cached, so there is no cache-key cost.
