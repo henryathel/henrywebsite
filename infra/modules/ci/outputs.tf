@@ -7,3 +7,8 @@ output "plan_role_arn" {
   description = "Role assumed by pull-request workflows to run `terraform plan`."
   value       = aws_iam_role.plan.arn
 }
+
+output "site_deploy_role_arn" {
+  description = "Role assumed by the deploy workflow on main."
+  value       = aws_iam_role.site_deploy.arn
+}
