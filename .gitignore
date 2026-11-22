@@ -30,3 +30,11 @@ __pycache__/
 token.txt
 *.token
 .env
+
+# Lambda build output (lambdas/build.py)
+lambdas/build/
+lambdas/dist/
+
+# Private keys never belong in the repo; only the public signing key is committed.
+*.key
+*private*.pem

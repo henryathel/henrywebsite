@@ -31,24 +31,28 @@ SNS). Every other region is denied. Design within this; don't plan on changing t
   - `/` and `/assets/*`, `/login*`: public.
   - `/roles/*`: restricted with a **trusted key group**, so requests need valid CloudFront
     **signed cookies**. Unauthenticated requests get 403; map 403 to `/login.html` via a
-    custom error response.
+    custom error response. Role pages are in their **own private bucket**, the origin only
+    for this behaviour (`docs/decisions.md` #14).
   - `/api/*`: routed to API Gateway.
   - `/img/henry-ashton.jpg`: the face image (see below). Must not be cached.
 - **Auth API**: API Gateway HTTP API + Python Lambdas.
   - `POST /api/auth/request` `{email}`: validate the email, rate-limit (per email and per IP),
     generate a 32-byte random token, store **only its SHA-256 hash** in DynamoDB with a
-    15-minute TTL, and send the link `https://<domain>/api/auth/verify?token=...` with SES.
+    30-minute TTL, and send the link `https://<domain>/api/auth/verify?token=...` with SES.
     Always return the same generic response, whether or not the email is new, so the endpoint
     can't be used to probe for addresses.
-  - `GET /api/auth/verify?token=...`: hash the token, then do a **conditional delete** in
+  - `GET /api/auth/verify?token=...`: show a confirmation page whose button POSTs the
+    token. GET changes nothing, so mail scanners that prefetch links can't use the token up
+    (`docs/decisions.md` #15).
+  - `POST /api/auth/verify` `{token}`: hash the token, then do a **conditional delete** in
     DynamoDB (single use, not expired). On success, write to the visitor log, issue CloudFront
-    signed cookies (valid 7 days) and redirect to `/roles/`. On failure, redirect to
+    signed cookies (valid 5 days) and redirect to `/roles/`. On failure, redirect to
     `/login.html?expired=1`.
 - **Signing key** for the cookies: generate the key pair outside Terraform state if possible;
   store the private key in SSM Parameter Store (SecureString) or Secrets Manager; the public
   key goes in the CloudFront key group.
-- **DynamoDB**: `tokens` table (hash key = token hash, TTL attribute) and `visitors` table
-  (email, timestamps). On-demand billing.
+- **DynamoDB**: `tokens` table (hash key = token hash, TTL attribute), `rate-limits` table
+  (hashed keys, TTL) and `visitors` table (email, timestamps). On-demand billing.
 - **SES**: verify the domain with DKIM. Note: new SES accounts are in the **sandbox** and can
   only send to verified addresses. Request production access before going live.
 - **Notification** (optional): SNS email to Henry on each new visitor.
@@ -107,7 +111,7 @@ SNS). Every other region is denied. Design within this; don't plan on changing t
 ## Open questions for Henry
 
 _Settled: domain `henryashton.dev` (registered at Namecheap, DNS in Route 53), canonical host
-`www.henryashton.dev` with the apex redirecting to it._
+`www.henryashton.dev` with the apex redirecting to it. Cookie lifetime 5 days; sign-in link
+expiry 30 minutes; sender `signin@henryashton.dev`._
 
-- Email address that should receive visitor notifications.
-- Cookie lifetime (default 7 days) and token expiry (default 15 minutes).
+- Email address that should receive visitor notifications (step 5).

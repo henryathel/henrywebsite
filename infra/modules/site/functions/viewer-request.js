@@ -1,6 +1,8 @@
-// Viewer-request function for the default behaviour (cloudfront-js-2.0).
+// Viewer-request function for the S3 behaviours (cloudfront-js-2.0).
 //  1. Redirects the apex domain to the canonical www host, keeping path and query.
-//  2. Maps directory-style URLs to index.html, which an S3 REST origin won't do itself.
+//  2. Redirects /roles to /roles/, so it reaches the protected behaviour rather than the
+//     public bucket (where it would only ever be a 404).
+//  3. Maps directory-style URLs to index.html, which an S3 REST origin won't do itself.
 
 var APEX = "${apex_domain}";
 var CANONICAL = "${canonical_domain}";
@@ -34,6 +36,14 @@ function handler(event) {
   }
 
   var uri = request.uri;
+  if (uri === "/roles") {
+    return {
+      statusCode: 301,
+      statusDescription: "Moved Permanently",
+      headers: { location: { value: "/roles/" } },
+    };
+  }
+
   if (uri.endsWith("/")) {
     request.uri = uri + "index.html";
   } else if (uri.split("/").pop().indexOf(".") === -1) {

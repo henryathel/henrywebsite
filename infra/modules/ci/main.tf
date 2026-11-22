@@ -1,7 +1,8 @@
 # GitHub Actions -> AWS federation.
 #
 # CI never applies Terraform: applies are run locally by Henry. Pull requests get a
-# read-only plan role; pushes to main get a role that can only publish public content.
+# read-only plan role; pushes to main get roles that can only publish content: public
+# pages from this repo, and role write-ups from the private content repo.
 
 data "aws_caller_identity" "current" {}
 data "aws_partition" "current" {}
@@ -12,14 +13,19 @@ locals {
 
   # GitHub's immutable subject format pins the numeric owner and repo IDs, so a deleted
   # and re-created repo of the same name can't assume these roles.
-  infra_repo_subject = "repo:${var.github_owner}@${var.github_owner_id}/${var.infra_repo}@${var.infra_repo_id}"
+  infra_repo_subject   = "repo:${var.github_owner}@${var.github_owner_id}/${var.infra_repo}@${var.infra_repo_id}"
+  content_repo_subject = "repo:${var.github_owner}@${var.github_owner_id}/${var.content_repo}@${var.content_repo_id}"
 
   partition  = data.aws_partition.current.partition
   account_id = data.aws_caller_identity.current.account_id
+  region     = data.aws_region.current.region
 
   account_arn_prefix = "arn:${local.partition}:iam::${local.account_id}"
   state_bucket_arn   = "arn:${local.partition}:s3:::${var.state_bucket_name}"
+  regional_prefix    = "${local.region}:${local.account_id}"
 }
+
+data "aws_region" "current" {}
 
 # AWS validates GitHub's certificate against its own trust store, so no thumbprint is needed.
 resource "aws_iam_openid_connect_provider" "github" {
@@ -98,7 +104,7 @@ data "aws_iam_policy_document" "plan" {
 
   # Bucket configuration only. ListBucket is needed for HeadBucket; there is no GetObject.
   statement {
-    sid = "SiteBucketConfigRead"
+    sid = "BucketConfigRead"
     actions = [
       "s3:GetAccelerateConfiguration",
       "s3:GetBucket*",
@@ -107,7 +113,7 @@ data "aws_iam_policy_document" "plan" {
       "s3:GetReplicationConfiguration",
       "s3:ListBucket",
     ]
-    resources = [var.site_bucket_arn]
+    resources = [var.site_bucket_arn, var.roles_bucket_arn]
   }
 
   statement {
@@ -142,6 +148,66 @@ data "aws_iam_policy_document" "plan" {
       "arn:${local.partition}:route53:::hostedzone/*",
       "arn:${local.partition}:route53:::change/*",
     ]
+  }
+
+  # Table descriptions only: no GetItem, Query or Scan, so no visitor emails or tokens.
+  statement {
+    sid = "TableRead"
+    actions = [
+      "dynamodb:DescribeContinuousBackups",
+      "dynamodb:DescribeTable",
+      "dynamodb:DescribeTimeToLive",
+      "dynamodb:GetResourcePolicy",
+      "dynamodb:ListTagsOfResource",
+    ]
+    resources = ["arn:${local.partition}:dynamodb:${local.regional_prefix}:table/${var.project}-*"]
+  }
+
+  # GetFunction also returns the environment, including the API origin secret. That
+  # secret is in Terraform state too, which this role already reads.
+  statement {
+    sid = "FunctionRead"
+    actions = [
+      "lambda:GetFunction",
+      "lambda:GetFunctionCodeSigningConfig",
+      "lambda:GetFunctionConfiguration",
+      "lambda:GetFunctionRecursionConfig",
+      "lambda:GetPolicy",
+      "lambda:ListTags",
+      "lambda:ListVersionsByFunction",
+    ]
+    resources = ["arn:${local.partition}:lambda:${local.regional_prefix}:function:${var.project}-*"]
+  }
+
+  statement {
+    sid       = "LogGroupList"
+    actions   = ["logs:DescribeLogGroups"]
+    resources = ["arn:${local.partition}:logs:${local.regional_prefix}:log-group:*"]
+  }
+
+  statement {
+    sid     = "LogGroupRead"
+    actions = ["logs:ListTagsForResource", "logs:ListTagsLogGroup"]
+    resources = [
+      "arn:${local.partition}:logs:${local.regional_prefix}:log-group:/aws/lambda/${var.project}-*",
+      "arn:${local.partition}:logs:${local.regional_prefix}:log-group:/aws/apigateway/${var.project}-*",
+    ]
+  }
+
+  statement {
+    sid     = "ApiRead"
+    actions = ["apigateway:GET"]
+    resources = [
+      "arn:${local.partition}:apigateway:${local.region}::/apis",
+      "arn:${local.partition}:apigateway:${local.region}::/apis/*",
+      "arn:${local.partition}:apigateway:${local.region}::/tags/*",
+    ]
+  }
+
+  statement {
+    sid       = "MailIdentityRead"
+    actions   = ["ses:GetEmailIdentity", "ses:ListTagsForResource"]
+    resources = ["arn:${local.partition}:ses:${local.regional_prefix}:identity/*"]
   }
 }
 
@@ -196,13 +262,13 @@ data "aws_iam_policy_document" "site_deploy" {
     resources = ["${var.site_bucket_arn}/*"]
   }
 
-  # roles/ belongs to the private content repo and faces/ to the face pipeline. The
-  # workflow already excludes them; this makes that a guarantee rather than a convention.
+  # faces/ belongs to the face pipeline. The workflow already excludes it; this makes
+  # that a guarantee rather than a convention. Role pages are in a separate bucket.
   statement {
-    sid       = "ProtectOtherPrefixes"
+    sid       = "ProtectFaces"
     effect    = "Deny"
     actions   = ["s3:PutObject", "s3:DeleteObject"]
-    resources = ["${var.site_bucket_arn}/roles/*", "${var.site_bucket_arn}/faces/*"]
+    resources = ["${var.site_bucket_arn}/faces/*"]
   }
 
   statement {
@@ -216,4 +282,62 @@ resource "aws_iam_role_policy" "site_deploy" {
   name   = "site-deploy"
   role   = aws_iam_role.site_deploy.id
   policy = data.aws_iam_policy_document.site_deploy.json
+}
+
+# --- Content deploy role: pushes to main on the private content repo only -------------
+
+data "aws_iam_policy_document" "content_deploy_trust" {
+  statement {
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+
+    principals {
+      type        = "Federated"
+      identifiers = [local.oidc_provider_arn]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "${local.github_oidc_host}:aud"
+      values   = ["sts.amazonaws.com"]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "${local.github_oidc_host}:sub"
+      values   = ["${local.content_repo_subject}:ref:refs/heads/main"]
+    }
+  }
+}
+
+resource "aws_iam_role" "content_deploy" {
+  name                 = "${var.project}-gha-content-deploy"
+  description          = "Assumed by GitHub Actions on the private content repo's main branch to publish role write-ups."
+  assume_role_policy   = data.aws_iam_policy_document.content_deploy_trust.json
+  max_session_duration = 3600
+}
+
+data "aws_iam_policy_document" "content_deploy" {
+  statement {
+    sid       = "List"
+    actions   = ["s3:ListBucket"]
+    resources = [var.roles_bucket_arn]
+  }
+
+  statement {
+    sid       = "WriteRolePages"
+    actions   = ["s3:PutObject", "s3:DeleteObject"]
+    resources = ["${var.roles_bucket_arn}/roles/*"]
+  }
+
+  statement {
+    sid       = "Invalidate"
+    actions   = ["cloudfront:CreateInvalidation"]
+    resources = [var.distribution_arn]
+  }
+}
+
+resource "aws_iam_role_policy" "content_deploy" {
+  name   = "content-deploy"
+  role   = aws_iam_role.content_deploy.id
+  policy = data.aws_iam_policy_document.content_deploy.json
 }

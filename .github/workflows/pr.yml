@@ -53,6 +53,14 @@ jobs:
         with:
           terraform_version: ${{ env.TF_VERSION }}
           terraform_wrapper: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      # The plan hashes the Lambda package. build.py is reproducible, so this matches
+      # what was last applied unless the code or its locked dependencies changed.
+      - name: build lambda package
+        working-directory: lambdas
+        run: python build.py
       - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
           role-to-assume: ${{ vars.AWS_PLAN_ROLE_ARN }}
@@ -78,20 +86,19 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    defaults:
+      run:
+        working-directory: lambdas
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      # No-op until the Lambda package is added in step 3.
-      - id: detect
-        run: echo "present=$([ -f lambdas/pyproject.toml ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
-      - if: steps.detect.outputs.present == 'true'
-        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.12"
-      - if: steps.detect.outputs.present == 'true'
-        working-directory: lambdas
-        run: |
-          pip install -e ".[dev]"
-          ruff check .
-          ruff format --check .
-          mypy .
-          pytest
+      - name: install
+        run: pip install --disable-pip-version-check -r requirements-dev.txt
+      - name: ruff
+        run: ruff check . && ruff format --check .
+      - name: mypy
+        run: mypy
+      - name: pytest
+        run: pytest
