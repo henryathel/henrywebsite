@@ -6,6 +6,15 @@
 terraform {
   required_version = "~> 1.17"
 
+  # Added after the first apply. On a brand-new account, comment this out, apply, then
+  # restore it and run `terraform init -migrate-state -backend-config=../infra/backend.hcl`.
+  backend "s3" {
+    key          = "bootstrap/terraform.tfstate"
+    region       = "eu-north-1"
+    encrypt      = true
+    use_lockfile = true
+  }
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"

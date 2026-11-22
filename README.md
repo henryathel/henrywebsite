@@ -18,30 +18,28 @@ Real role write-ups are kept in the private `henrywebsite-content` repository.
 
 ## First-time setup
 
-Needs AWS credentials with admin rights in your shell, Terraform 1.17.
+Needs Terraform 1.17 and AWS CLI 2.32+. Sign in with `aws login --profile henrywebsite`
+(see `docs/decisions.md` #9), and run Terraform with `AWS_PROFILE=henrywebsite`.
 
-1. **State bucket**
+1. **State bucket.** `bootstrap/main.tf` already declares the S3 backend, which can't be
+   used until the bucket exists. On a brand-new account, comment out the `backend "s3"`
+   block, then:
 
    ```sh
    cd bootstrap
    terraform init && terraform apply
    ```
 
-   Then move bootstrap's own state into the bucket. Add this block to `bootstrap/main.tf`
-   (and commit it), create `infra/backend.hcl` as in step 2, run
-   `terraform init -migrate-state -backend-config=../infra/backend.hcl`, and delete the
-   local `terraform.tfstate*` files.
+   Restore the block, create `infra/backend.hcl` as in step 2, and move the state into
+   the bucket:
 
-   ```hcl
-   terraform {
-     backend "s3" {
-       key          = "bootstrap/terraform.tfstate"
-       region       = "eu-north-1"
-       encrypt      = true
-       use_lockfile = true
-     }
-   }
+   ```sh
+   terraform init -migrate-state -backend-config=../infra/backend.hcl
+   rm terraform.tfstate terraform.tfstate.backup
    ```
+
+   Afterwards, `bootstrap/` is used like any other stack:
+   `terraform init -backend-config=../infra/backend.hcl`.
 
 2. **Infrastructure**
 
