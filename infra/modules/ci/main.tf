@@ -136,6 +136,14 @@ data "aws_iam_policy_document" "plan" {
     resources = ["arn:${local.partition}:cloudfront::${local.account_id}:*"]
   }
 
+  # GetPublicKey doesn't support resource-level permissions, so it can only be granted on
+  # "*". It returns public keys only.
+  statement {
+    sid       = "CloudFrontPublicKeyRead"
+    actions   = ["cloudfront:GetPublicKey"]
+    resources = ["*"]
+  }
+
   # Route 53 ARNs carry no account ID; the account is dedicated to this project.
   statement {
     sid = "DnsRead"
