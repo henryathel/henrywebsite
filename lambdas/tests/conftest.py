@@ -28,8 +28,8 @@ def aws(monkeypatch: pytest.MonkeyPatch, signing_key: rsa.RSAPrivateKey) -> Iter
         "AWS_SECRET_ACCESS_KEY": "testing",
         "SITE_URL": SITE,
         "ORIGIN_SECRET": SECRET,
-        "TOKENS_TABLE": "tokens",
-        "TOKEN_TTL_SECONDS": "1800",
+        "CODES_TABLE": "codes",
+        "CODE_TTL_SECONDS": "600",
         "RATE_LIMITS_TABLE": "rate-limits",
         "VISITORS_TABLE": "visitors",
         "SENDER": "signin@example.test",
@@ -44,7 +44,7 @@ def aws(monkeypatch: pytest.MonkeyPatch, signing_key: rsa.RSAPrivateKey) -> Iter
 
     with mock_aws():
         dynamodb = boto3.client("dynamodb")
-        for table, key in (("tokens", "token_hash"), ("rate-limits", "key"), ("visitors", "email")):
+        for table, key in (("codes", "email"), ("rate-limits", "key"), ("visitors", "email")):
             dynamodb.create_table(
                 TableName=table,
                 KeySchema=[{"AttributeName": key, "KeyType": "HASH"}],

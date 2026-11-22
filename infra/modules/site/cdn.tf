@@ -105,8 +105,8 @@ moved {
   to   = aws_cloudfront_response_headers_policy.this["security"]
 }
 
-# Only what the auth API uses: the form body's content type, the query string (the
-# verify token), and the viewer's IP address for rate limiting. No cookies.
+# Only what the auth API uses: the form body's content type and the viewer's IP address
+# for rate limiting. No cookies or query strings.
 resource "aws_cloudfront_origin_request_policy" "api" {
   name    = "${var.project}-auth-api"
   comment = "Forward to the auth API only what it reads"
@@ -119,7 +119,7 @@ resource "aws_cloudfront_origin_request_policy" "api" {
   }
 
   query_strings_config {
-    query_string_behavior = "all"
+    query_string_behavior = "none"
   }
 
   cookies_config {

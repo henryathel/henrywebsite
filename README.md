@@ -1,7 +1,7 @@
 # henrywebsite
 
 Infrastructure and public pages for Henry Ashton's career site: S3 + CloudFront, an email
-magic-link sign-in for detailed role pages, and a GAN-generated face that changes on every
+emailed-code sign-in for detailed role pages, and a GAN-generated face that changes on every
 load. All infrastructure is Terraform; see `docs/decisions.md` for the reasoning.
 
 ## Layout

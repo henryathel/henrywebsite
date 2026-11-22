@@ -4,7 +4,7 @@ variable "project" {
 }
 
 variable "domain_name" {
-  description = "Apex domain. Mail is sent from it; links point at www.<domain_name>."
+  description = "Apex domain. Mail is sent from it; the site is at www.<domain_name>."
   type        = string
 }
 
@@ -28,8 +28,8 @@ variable "signing_key_parameter" {
   type        = string
 }
 
-variable "token_ttl_minutes" {
-  description = "How long an emailed sign-in link stays valid."
+variable "code_ttl_minutes" {
+  description = "How long an emailed sign-in code stays valid."
   type        = number
 }
 

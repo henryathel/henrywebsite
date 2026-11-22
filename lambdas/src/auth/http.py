@@ -5,7 +5,7 @@ import hmac
 import ipaddress
 import json
 from typing import Any
-from urllib.parse import parse_qs
+from urllib.parse import parse_qs, quote
 
 Event = dict[str, Any]
 Response = dict[str, Any]
@@ -71,12 +71,11 @@ def redirect(location: str, cookies: list[str] | None = None) -> Response:
     return response
 
 
-def html(body: str) -> Response:
-    return {
-        "statusCode": 200,
-        "headers": {"Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store"},
-        "body": body,
-    }
+def code_page(email: str, *, wrong: bool = False) -> str:
+    """Where to enter the code. The address travels in the URL fragment, which browsers
+    never send to a server, so it stays out of CloudFront and S3 requests."""
+    query = "?wrong=1" if wrong else ""
+    return f"/login-code.html{query}#email={quote(email, safe='@')}"
 
 
 def forbidden() -> Response:

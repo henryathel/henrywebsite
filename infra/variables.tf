@@ -64,14 +64,14 @@ variable "signing_key_parameter" {
   default     = "/henrywebsite/cookie-signing-key"
 }
 
-variable "token_ttl_minutes" {
-  description = "How long an emailed sign-in link stays valid."
+variable "code_ttl_minutes" {
+  description = "How long an emailed sign-in code stays valid."
   type        = number
-  default     = 30
+  default     = 10
 }
 
 variable "cookie_ttl_days" {
-  description = "How long a sign-in lasts before the visitor must request a new link."
+  description = "How long a sign-in lasts before the visitor must request a new code."
   type        = number
   default     = 5
 }

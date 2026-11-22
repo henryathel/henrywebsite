@@ -1,15 +1,16 @@
-# On-demand tables. Each expires items through a TTL attribute; DynamoDB deletes expired
-# items only eventually, so code that cares (token expiry) also checks the time itself.
+# On-demand tables. Codes and rate-limit counters expire through a TTL attribute; DynamoDB
+# deletes expired items only eventually, so the code also checks expiry itself.
 
-resource "aws_dynamodb_table" "tokens" {
-  #checkov:skip=CKV_AWS_28:Tokens live for minutes; there is nothing worth restoring.
+# One live code per address: requesting a new code replaces the old one.
+resource "aws_dynamodb_table" "codes" {
+  #checkov:skip=CKV_AWS_28:Codes live for minutes; there is nothing worth restoring.
   #checkov:skip=CKV_AWS_119:Encrypted with the AWS-owned key; a CMK costs monthly and adds no access control here.
-  name         = "${var.project}-tokens"
+  name         = "${var.project}-sign-in-codes"
   billing_mode = "PAY_PER_REQUEST"
-  hash_key     = "token_hash"
+  hash_key     = "email"
 
   attribute {
-    name = "token_hash"
+    name = "email"
     type = "S"
   }
 
