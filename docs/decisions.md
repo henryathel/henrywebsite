@@ -51,3 +51,14 @@ Third-party actions are pinned to full commit SHAs, with the version in a commen
 moved tag can't change what runs. Dependabot proposes updates monthly. Every job starts
 from `permissions: {}` and requests only what it needs; only jobs that call AWS get
 `id-token: write`.
+
+## 8. Region is eu-north-1, not eu-west-2
+
+The site runs in its own account within Henry's AWS Organization. An org-wide region
+restriction SCP fully allows only `eu-north-1`; `us-east-1` is limited to global services
+(CloudFront, IAM, ACM, Route 53, Budgets) and every other region is denied. Rather than
+loosen a policy that also protects other accounts, the site works within it: regional
+resources go in `eu-north-1`, and the CloudFront certificate in `us-east-1`. Pages are
+served from CloudFront edge locations, so the region only adds a few tens of milliseconds
+to the sign-in API calls from the UK, and data stays in the EU. One consequence: the random
+face must use a CloudFront Function, because Lambda@Edge needs Lambda in `us-east-1`.

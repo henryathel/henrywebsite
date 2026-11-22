@@ -19,7 +19,12 @@ pages: `index.html`, `login.html`, `roles/index.html`, `roles/example.html`.
 
 ## Architecture
 
-Region: `eu-west-2` (London), except resources CloudFront requires in `us-east-1` (ACM cert).
+Region: `eu-north-1` (Stockholm), except resources CloudFront requires in `us-east-1` (ACM cert).
+
+The site has its own AWS account in Henry's organization. An org-wide SCP fully allows only
+`eu-north-1`; in `us-east-1` it allows only global services (CloudFront, IAM, ACM, Route 53,
+Budgets, KMS, STS, Logs, WAF) and denies regional ones (Lambda, DynamoDB, SES, S3 buckets,
+SNS). Every other region is denied. Design within this; don't plan on changing the SCP.
 
 - **Static site**: private S3 bucket, served only through CloudFront with Origin Access Control.
 - **CloudFront behaviours**:
@@ -52,9 +57,9 @@ Region: `eu-west-2` (London), except resources CloudFront requires in `us-east-1
 
 - A pool of a few hundred pre-generated GAN faces stored in S3 under `faces/` (generated
   separately on a GPU machine; not part of this repository's build). Use numbered filenames.
-- `/img/henry-ashton.jpg` serves a **random** face from the pool on each request. Prefer a
-  CloudFront Function that rewrites the URI to a random `faces/NNN.jpg` (check that the
-  CloudFront Functions runtime supports `Math.random`; otherwise use Lambda@Edge). Use a
+- `/img/henry-ashton.jpg` serves a **random** face from the pool on each request, using a
+  CloudFront Function that rewrites the URI to a random `faces/NNN.jpg`. **Lambda@Edge is not
+  an option**: it must be created in `us-east-1`, where the SCP denies Lambda. Use a
   cache policy with caching disabled for this path, and `Cache-Control: no-store`.
 - Markup on the landing page: `alt="Henry Ashton"`, a visible caption stating the face is
   GAN-generated and is not a photo of Henry, linked with `aria-describedby` so screen-reader
