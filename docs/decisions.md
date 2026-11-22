@@ -26,6 +26,11 @@ read actions per resource type, limited to `henrywebsite-*` ARNs, and gains perm
 later modules add resources. Only pull requests from the repo itself can assume it: fork
 PRs receive no OIDC token under the `pull_request` trigger.
 
+The trust policy matches GitHub's immutable subject format
+(`repo:<owner>@<owner-id>/<repo>@<repo-id>:pull_request`), which GitHub uses for this
+repository. Pinning numeric IDs means a deleted and re-created repo with the same name
+cannot assume the role.
+
 ## 4. S3 native state locking
 
 Terraform 1.10+ can lock state with a lock file in the S3 bucket (`use_lockfile`), so there

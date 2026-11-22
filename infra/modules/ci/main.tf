@@ -11,6 +11,10 @@ locals {
   github_oidc_host  = "token.actions.githubusercontent.com"
   oidc_provider_arn = coalesce(var.github_oidc_provider_arn, one(aws_iam_openid_connect_provider.github[*].arn))
 
+  # GitHub's immutable subject format pins the numeric owner and repo IDs, so a deleted
+  # and re-created repo of the same name can't assume these roles.
+  infra_repo_subject = "repo:${var.github_owner}@${var.github_owner_id}/${var.infra_repo}@${var.infra_repo_id}"
+
   account_arn_prefix = "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}"
   state_bucket_arn   = "arn:${data.aws_partition.current.partition}:s3:::${var.state_bucket_name}"
 }
@@ -45,7 +49,7 @@ data "aws_iam_policy_document" "plan_trust" {
     condition {
       test     = "StringEquals"
       variable = "${local.github_oidc_host}:sub"
-      values   = ["repo:${var.github_owner}/${var.infra_repo}:pull_request"]
+      values   = ["${local.infra_repo_subject}:pull_request"]
     }
   }
 }

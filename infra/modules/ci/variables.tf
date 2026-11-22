@@ -8,9 +8,19 @@ variable "github_owner" {
   type        = string
 }
 
+variable "github_owner_id" {
+  description = "Numeric ID of the GitHub owner; part of the immutable OIDC subject."
+  type        = number
+}
+
 variable "infra_repo" {
   description = "Repository whose pull requests may assume the plan role."
   type        = string
+}
+
+variable "infra_repo_id" {
+  description = "Numeric ID of the infra repository; part of the immutable OIDC subject."
+  type        = number
 }
 
 variable "state_bucket_name" {

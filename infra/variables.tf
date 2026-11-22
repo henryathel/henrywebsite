@@ -16,10 +16,22 @@ variable "github_owner" {
   default     = "henryathel"
 }
 
+variable "github_owner_id" {
+  description = "Numeric ID of the GitHub owner (`gh api users/<owner> --jq .id`)."
+  type        = number
+  default     = 213582221
+}
+
 variable "infra_repo" {
   description = "Public repository holding this infrastructure and the public pages."
   type        = string
   default     = "henrywebsite"
+}
+
+variable "infra_repo_id" {
+  description = "Numeric ID of the infra repository (`gh api repos/<owner>/<repo> --jq .id`)."
+  type        = number
+  default     = 1466927842
 }
 
 variable "github_oidc_provider_arn" {
