@@ -37,3 +37,8 @@ output "site_url" {
   description = "Canonical URL of the site."
   value       = module.site.site_url
 }
+
+output "face_count" {
+  description = "Faces in the pool served at /img/henry-ashton.jpg."
+  value       = module.faces.face_count
+}

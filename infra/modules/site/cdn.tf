@@ -28,20 +28,26 @@ resource "aws_cloudfront_function" "viewer_request" {
   })
 }
 
-# Two policies with the same security headers; the second also keeps search engines out
-# of the sign-in pages, the API and the protected write-ups.
+# Three policies with the same security headers. `noindex` also keeps search engines out
+# of the sign-in pages, the API and the protected write-ups; `no_store` stops browsers
+# keeping the random face, so each page load shows a new one.
 locals {
   response_headers_policies = {
-    security = { name = "${var.project}-security-headers", noindex = false }
-    noindex  = { name = "${var.project}-security-headers-noindex", noindex = true }
+    security = { name = "${var.project}-security-headers", noindex = false, no_store = false }
+    noindex  = { name = "${var.project}-security-headers-noindex", noindex = true, no_store = false }
+    no_store = { name = "${var.project}-security-headers-no-store", noindex = false, no_store = true }
   }
 }
 
 resource "aws_cloudfront_response_headers_policy" "this" {
   for_each = local.response_headers_policies
 
-  name    = each.value.name
-  comment = each.value.noindex ? "Security headers plus X-Robots-Tag: noindex" : "Security headers for every response"
+  name = each.value.name
+  comment = (
+    each.value.noindex ? "Security headers plus X-Robots-Tag: noindex" :
+    each.value.no_store ? "Security headers plus Cache-Control: no-store" :
+    "Security headers for every response"
+  )
 
   security_headers_config {
     strict_transport_security {
@@ -94,6 +100,16 @@ resource "aws_cloudfront_response_headers_policy" "this" {
       content {
         header   = "X-Robots-Tag"
         value    = "noindex, nofollow"
+        override = true
+      }
+    }
+
+    dynamic "items" {
+      for_each = each.value.no_store ? [1] : []
+
+      content {
+        header   = "Cache-Control"
+        value    = "no-store"
         override = true
       }
     }
@@ -220,6 +236,24 @@ resource "aws_cloudfront_distribution" "site" {
     function_association {
       event_type   = "viewer-request"
       function_arn = aws_cloudfront_function.viewer_request.arn
+    }
+  }
+
+  # A random face on every request: the function picks one, and neither CloudFront nor the
+  # browser may keep it. Only this exact path; the pool itself is under /faces/.
+  ordered_cache_behavior {
+    path_pattern               = "/img/henry-ashton.jpg"
+    target_origin_id           = local.s3_origin_id
+    viewer_protocol_policy     = "redirect-to-https"
+    allowed_methods            = ["GET", "HEAD"]
+    cached_methods             = ["GET", "HEAD"]
+    compress                   = true
+    cache_policy_id            = local.caching_disabled_policy_id
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.this["no_store"].id
+
+    function_association {
+      event_type   = "viewer-request"
+      function_arn = var.face_function_arn
     }
   }
 
