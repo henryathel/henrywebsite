@@ -10,7 +10,7 @@ should be one Henry can explain and defend in an interview.
   education. This is what LinkedIn links to. It must persuade on its own.
 - **Protected role pages** (`/roles/*`): detailed write-ups of each role and project. Visitors get
   access by entering their email address and then a six-digit code emailed to it.
-- **Generated face** on the landing page: a face produced by a GAN, different on each load,
+- **Generated face** on the landing page: an AI-generated face, different on each load,
   visibly labelled as *not* a photo of Henry (see "Face image" below).
 - **Visitor log**: every successful sign-in is recorded (email, time) so Henry can see who looked.
 
@@ -58,14 +58,16 @@ SNS). Every other region is denied. Design within this; don't plan on changing t
 
 ## Face image
 
-- A pool of a few hundred pre-generated GAN faces stored in S3 under `faces/` (generated
-  separately on a GPU machine; not part of this repository's build). Use numbered filenames.
+- A pool of a few hundred pre-generated faces stored in S3 under `faces/`, made with
+  FLUX.1 [schnell] (Apache 2.0) on Replicate by `scripts/generate-faces.py`, reviewed by hand,
+  and uploaded by `scripts/upload-faces.sh` as `faces/000.jpg` onward. Not a GAN: the
+  pretrained face GANs are licensed for research only (`docs/decisions.md` #25).
 - `/img/henry-ashton.jpg` serves a **random** face from the pool on each request, using a
   CloudFront Function that rewrites the URI to a random `faces/NNN.jpg`. **Lambda@Edge is not
   an option**: it must be created in `us-east-1`, where the SCP denies Lambda. Use a
   cache policy with caching disabled for this path, and `Cache-Control: no-store`.
 - Markup on the landing page: `alt="Henry Ashton"`, a visible caption stating the face is
-  GAN-generated and is not a photo of Henry, linked with `aria-describedby` so screen-reader
+  AI-generated and is not a photo of Henry, linked with `aria-describedby` so screen-reader
   users get the caption too.
 - **`og:image` must NOT be a face.** LinkedIn shows it in link previews with no caption. Use a
   neutral image (initials or an abstract graphic).
