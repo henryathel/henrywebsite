@@ -23,3 +23,8 @@ variable "roles_key_group_id" {
   description = "CloudFront key group whose signed cookies unlock /roles/*."
   type        = string
 }
+
+variable "face_function_arn" {
+  description = "Viewer-request function that serves a random face at /img/henry-ashton.jpg."
+  type        = string
+}

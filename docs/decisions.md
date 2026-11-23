@@ -220,3 +220,31 @@ browser: sign-in succeeded but `/roles/` still returned 403. Least privilege poi
 wrong way here. The `/api/*` origin request policy now forwards all cookies. That shares
 nothing: the signed cookies are scoped to `Path=/roles/`, so browsers don't send them to
 `/api/*`, and the API isn't cached, so there is no cache-key cost.
+
+## 23. The random face: a CloudFront Function, with the pool size read from the bucket
+
+`/img/henry-ashton.jpg` has its own behaviour, whose viewer-request function rewrites the
+path to a random `faces/NNN.jpg` before CloudFront looks anything up. That behaviour uses
+the managed caching-disabled policy, so each request reaches S3 and gets a fresh pick, and
+a response headers policy adds `Cache-Control: no-store` so browsers don't keep it either.
+Lambda@Edge isn't an option (#8), and a function is free at this traffic.
+
+A function can't list S3 or read files, so it has to know the pool size. Rather than a
+variable that could drift from what was uploaded, Terraform reads the `faces/` keys from
+the bucket and writes the count into the function code. A precondition requires the keys
+to be exactly `faces/000.jpg` onward with no gaps, so the function can pick a number
+rather than carry a list of names. `scripts/upload-faces.sh` renumbers and uploads a pool;
+an apply then publishes the new count. The trade-off is that a plan depends on bucket
+contents as well as code, which is visible in the plan as a function change. With no faces
+uploaded, the function serves a neutral placeholder image instead.
+
+The faces live in the site bucket under `faces/`. The site deploy workflow excludes that
+prefix and its role is denied writes to it, so a page deploy can't delete the pool.
+
+## 24. The link-preview image is never a face
+
+LinkedIn shows `og:image` in link previews with no caption, so a generated face there
+would look like a photo of Henry. The preview image is the initials and name instead,
+drawn by `scripts/make-og-image.py` so it can be regenerated rather than edited by hand.
+On the page, the face has `alt="Henry Ashton"` and a visible caption saying it is
+generated, linked by `aria-describedby` so screen readers announce it too.
