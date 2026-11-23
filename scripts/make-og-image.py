@@ -1,8 +1,12 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.12"
+# dependencies = ["pillow==12.0.0"]
+# ///
 """Draw the link-preview image, site/assets/og-image.png.
 
 LinkedIn and others show og:image with no caption, so it is deliberately not a face
-(docs/decisions.md #24): just initials, name and domain. Needs Pillow and DejaVu Sans.
+(docs/decisions.md #24): just initials, name and domain. Needs DejaVu Sans.
 """
 
 from pathlib import Path

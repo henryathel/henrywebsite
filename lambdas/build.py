@@ -1,3 +1,7 @@
+# /// script
+# requires-python = "==3.12.*"
+# dependencies = []
+# ///
 """Build dist/auth.zip, the deployment package shared by both auth Lambdas.
 
 Installs the locked dependencies as arm64 (Graviton) wheels for Python 3.12, adds src/,
@@ -6,12 +10,11 @@ permissions, and no install metadata that varies between machines. A local build
 CI build therefore hash the same, so `terraform plan` shows no change to the functions
 unless the code or dependencies change.
 
-Usage: python build.py
+Usage: uv run build.py
 """
 
 import shutil
 import subprocess
-import sys
 import zipfile
 from pathlib import Path
 
@@ -19,7 +22,7 @@ ROOT = Path(__file__).resolve().parent
 PACKAGE = ROOT / "build" / "package"
 OUTPUT = ROOT / "dist" / "auth.zip"
 
-# Pip writes these per install; they differ between pip versions and machines.
+# Installers write these per install; they differ between installers, versions and machines.
 VOLATILE = {"RECORD", "INSTALLER", "REQUESTED", "direct_url.json"}
 FIXED_TIME = (1980, 1, 1, 0, 0, 0)
 
@@ -27,19 +30,15 @@ FIXED_TIME = (1980, 1, 1, 0, 0, 0)
 def install_dependencies() -> None:
     shutil.rmtree(PACKAGE, ignore_errors=True)
     subprocess.run(  # noqa: S603 - fixed arguments, no user input
-        [
-            sys.executable,
-            "-m",
+        [  # noqa: S607 - uv from PATH, as `uv run` provides
+            "uv",
             "pip",
             "install",
             "--quiet",
-            "--disable-pip-version-check",
             "--require-hashes",
             "--only-binary=:all:",
-            "--platform=manylinux2014_aarch64",
-            "--implementation=cp",
+            "--python-platform=aarch64-manylinux2014",
             "--python-version=3.12",
-            "--no-compile",
             "--target",
             str(PACKAGE),
             "--requirement",
@@ -47,8 +46,10 @@ def install_dependencies() -> None:
         ],
         check=True,
     )
-    # Console scripts embed the local interpreter path and aren't needed in Lambda.
+    # Console scripts embed the local interpreter path and aren't needed in Lambda; uv
+    # leaves a lock file for concurrent installs into the target.
     shutil.rmtree(PACKAGE / "bin", ignore_errors=True)
+    (PACKAGE / ".lock").unlink(missing_ok=True)
     shutil.copytree(
         ROOT / "src" / "auth", PACKAGE / "auth", ignore=shutil.ignore_patterns("__pycache__")
     )

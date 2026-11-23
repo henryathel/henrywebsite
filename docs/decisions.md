@@ -175,8 +175,8 @@ Both functions ship the same zip but get different handlers, environment variabl
 roles. The request function can store codes, count requests and send from
 `signin@henryashton.dev` only; the verify function can count guesses and delete codes, update the visitor
 log and read the signing key. `lambdas/build.py` installs hash-locked arm64 wheels and
-writes a zip with fixed timestamps, permissions and ordering, dropping per-install pip
-metadata. A CI build and a local build hash identically, so `plan` only shows a function
+writes a zip with fixed timestamps, permissions and ordering, dropping per-install
+installer metadata. It installs with uv, pinned to the same version in CI. A CI build and a local build hash identically, so `plan` only shows a function
 change when the code or its dependencies change.
 
 ## 20. SES: domain identity with DKIM and a custom MAIL FROM domain

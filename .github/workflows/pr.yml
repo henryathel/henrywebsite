@@ -12,6 +12,8 @@ concurrency:
 
 env:
   TF_VERSION: 1.17.2
+  # Pinned so CI installs Lambda dependencies with the same uv as local builds.
+  UV_VERSION: 0.13.5
   AWS_REGION: eu-north-1
   TF_IN_AUTOMATION: "true"
   TF_INPUT: "false"
@@ -53,14 +55,15 @@ jobs:
         with:
           terraform_version: ${{ env.TF_VERSION }}
           terraform_wrapper: false
-      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
+          version: ${{ env.UV_VERSION }}
           python-version: "3.12"
       # The plan hashes the Lambda package. build.py is reproducible, so this matches
       # what was last applied unless the code or its locked dependencies changed.
       - name: build lambda package
         working-directory: lambdas
-        run: python build.py
+        run: uv run build.py
       - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
           role-to-assume: ${{ vars.AWS_PLAN_ROLE_ARN }}
@@ -91,14 +94,15 @@ jobs:
         working-directory: lambdas
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
+          version: ${{ env.UV_VERSION }}
           python-version: "3.12"
       - name: install
-        run: pip install --disable-pip-version-check -r requirements-dev.txt
+        run: uv venv && uv pip sync requirements-dev.txt
       - name: ruff
-        run: ruff check . && ruff format --check .
+        run: .venv/bin/ruff check . && .venv/bin/ruff format --check .
       - name: mypy
-        run: mypy
+        run: .venv/bin/mypy
       - name: pytest
-        run: pytest
+        run: .venv/bin/pytest
