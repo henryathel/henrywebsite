@@ -19,7 +19,7 @@ Real role write-ups are kept in the private `henrywebsite-content` repository.
 
 ## First-time setup
 
-Needs Terraform 1.17, Python 3.12 and AWS CLI 2.32+. Sign in with `aws login --profile henrywebsite`
+Needs Terraform 1.17, uv (which fetches Python 3.12 itself) and AWS CLI 2.32+. Sign in with `aws login --profile henrywebsite`
 (see `docs/decisions.md` #9), and run Terraform with `AWS_PROFILE=henrywebsite`.
 
 1. **State bucket.** `bootstrap/main.tf` already declares the S3 backend, which can't be
@@ -54,7 +54,7 @@ Needs Terraform 1.17, Python 3.12 and AWS CLI 2.32+. Sign in with `aws login --p
    Build the Lambda package. Terraform hashes it, so rebuild before every plan or apply:
 
    ```sh
-   (cd lambdas && python3.12 build.py)
+   (cd lambdas && uv run build.py)
    ```
 
    Then:
@@ -127,7 +127,7 @@ and tests the Lambdas. Merge, then build the Lambda package and run `terraform a
 Lambda development, from `lambdas/`:
 
 ```sh
-uv venv -p 3.12 && uv pip install -r requirements-dev.txt
+uv venv -p 3.12 && uv pip sync requirements-dev.txt
 .venv/bin/pytest && .venv/bin/mypy && .venv/bin/ruff check .
 ```
 
