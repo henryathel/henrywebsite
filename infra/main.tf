@@ -18,6 +18,14 @@ module "site" {
   api_domain         = module.auth.api_domain
   api_origin_secret  = module.auth.origin_secret
   roles_key_group_id = module.auth.key_group_id
+  face_function_arn  = module.faces.function_arn
+}
+
+module "faces" {
+  source = "./modules/faces"
+
+  project     = var.project
+  bucket_name = module.site.bucket_name
 }
 
 module "auth" {
