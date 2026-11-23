@@ -1,7 +1,7 @@
 # henrywebsite
 
 Infrastructure and public pages for Henry Ashton's career site: S3 + CloudFront, an email
-emailed-code sign-in for detailed role pages, and a GAN-generated face that changes on every
+emailed-code sign-in for detailed role pages, and an AI-generated face that changes on every
 load. All infrastructure is Terraform; see `docs/decisions.md` for the reasoning.
 
 ## Layout
@@ -107,11 +107,19 @@ Needs Terraform 1.17, Python 3.12 and AWS CLI 2.32+. Sign in with `aws login --p
    - `ROLES_BUCKET`: the `roles_bucket` output
    - `CLOUDFRONT_DISTRIBUTION_ID`: as above
 
-4. **Face pool** (optional until the faces exist; a placeholder shows until then). Generate
-   the faces elsewhere, put the JPEGs in one directory, then:
+4. **Face pool** (a placeholder shows until it exists). Generate the faces with FLUX.1
+   [schnell] on Replicate, using an API token from replicate.com (Account settings → API
+   tokens). Keep the output outside the repo:
 
    ```sh
-   AWS_PROFILE=henrywebsite scripts/upload-faces.sh path/to/faces
+   REPLICATE_API_TOKEN=... scripts/generate-faces.py ~/faces --count 300
+   ```
+
+   Look through `~/faces` and delete any face that is distorted or odd; the upload
+   renumbers what is left. Then:
+
+   ```sh
+   AWS_PROFILE=henrywebsite scripts/upload-faces.sh ~/faces
    cd infra && terraform apply
    ```
 

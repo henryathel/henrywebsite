@@ -248,3 +248,20 @@ would look like a photo of Henry. The preview image is the initials and name ins
 drawn by `scripts/make-og-image.py` so it can be regenerated rather than edited by hand.
 On the page, the face has `alt="Henry Ashton"` and a visible caption saying it is
 generated, linked by `aria-describedby` so screen readers announce it too.
+
+## 25. Faces from FLUX.1 [schnell] on a hosted API, not a GAN
+
+The brief asked for GAN faces. The standard choice, NVIDIA's StyleGAN2/3 trained on FFHQ,
+is licensed for "research or evaluation purposes only", and FFHQ itself is Flickr photos
+of real people under a non-commercial licence. A career site is neither research nor
+evaluation, so that licence would be hard to defend. FLUX.1 [schnell] is a
+diffusion model whose weights are Apache 2.0, which allows any use; Replicate's terms
+assign the outputs to the customer. The caption says "AI image model" rather than GAN.
+
+Generation runs once, on Replicate, from `scripts/generate-faces.py`: a few hundred
+512×512 images cost around a dollar and need no GPU of our own, and nothing about it
+touches the AWS account. Each face gets its own prompt, built from lists of ages,
+ancestries, hair, clothing and backgrounds chosen by a fixed seed, so the pool is varied
+and a resumed run asks for the same faces. Prompts never name a real person. The script
+keeps a manifest of model, prompt and seed for every face, and the pool is reviewed by
+hand before upload.
