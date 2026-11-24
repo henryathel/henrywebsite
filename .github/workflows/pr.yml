@@ -73,6 +73,9 @@ jobs:
       # Logs are public on a public repo: never put secrets in plan output.
       - name: plan
         run: terraform plan -lock=false -no-color
+        env:
+          # Kept out of the public repo; the variable is sensitive, so the plan redacts it.
+          TF_VAR_notification_email: ${{ secrets.NOTIFICATION_EMAIL }}
 
   checkov:
     runs-on: ubuntu-latest

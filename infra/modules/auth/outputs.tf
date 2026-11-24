@@ -13,3 +13,8 @@ output "key_group_id" {
   description = "CloudFront key group trusted for signed cookies on /roles/*."
   value       = aws_cloudfront_key_group.roles.id
 }
+
+output "visitors_stream_arn" {
+  description = "Stream of changes to the visitor log; a new item is a first sign-in."
+  value       = aws_dynamodb_table.visitors.stream_arn
+}

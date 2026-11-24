@@ -81,3 +81,15 @@ variable "ses_test_recipients" {
   type        = set(string)
   default     = []
 }
+
+variable "notification_email" {
+  description = "Address for new-visitor and budget alerts. Set in terraform.tfvars (git-ignored) and as the NOTIFICATION_EMAIL secret for CI plans; never committed."
+  type        = string
+  sensitive   = true
+}
+
+variable "monthly_budget_usd" {
+  description = "Monthly AWS cost that triggers a budget alert."
+  type        = number
+  default     = 5
+}

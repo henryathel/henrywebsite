@@ -42,6 +42,16 @@ module "auth" {
   ses_test_recipients    = var.ses_test_recipients
 }
 
+module "alerts" {
+  source = "./modules/alerts"
+
+  project             = var.project
+  domain_name         = var.domain_name
+  notification_email  = var.notification_email
+  monthly_budget_usd  = var.monthly_budget_usd
+  visitors_stream_arn = module.auth.visitors_stream_arn
+}
+
 module "ci" {
   source = "./modules/ci"
 

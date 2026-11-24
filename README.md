@@ -93,6 +93,16 @@ Needs Terraform 1.17, uv (which fetches Python 3.12 itself) and AWS CLI 2.32+. S
    For real visitors, request SES production access (SES console in `eu-north-1` →
    **Account dashboard** → **Request production access**).
 
+   New-visitor and budget alerts go to an address that stays out of this public repo. Set
+   it in `infra/terraform.tfvars` too:
+
+   ```hcl
+   notification_email = "you@example.com"
+   ```
+
+   After the apply, SNS emails that address a confirmation link. New-visitor alerts
+   only arrive once it has been clicked. Budget alerts need no confirmation.
+
 3. **GitHub repository variables** (Settings → Secrets and variables → Actions → Variables)
 
    - `AWS_PLAN_ROLE_ARN`: the `plan_role_arn` output
@@ -100,6 +110,9 @@ Needs Terraform 1.17, uv (which fetches Python 3.12 itself) and AWS CLI 2.32+. S
    - `AWS_SITE_DEPLOY_ROLE_ARN`: the `site_deploy_role_arn` output
    - `SITE_BUCKET`: the `site_bucket` output
    - `CLOUDFRONT_DISTRIBUTION_ID`: the `cloudfront_distribution_id` output
+
+   And under **Secrets**: `NOTIFICATION_EMAIL`, the same address as `notification_email`,
+   so PR plans don't show the alerts being removed (`docs/decisions.md` #27).
 
    In the private `henrywebsite-content` repository:
 

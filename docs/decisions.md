@@ -280,3 +280,33 @@ shared without its caption.
 Generation runs once from `scripts/generate-faces.py`, one image at a time: about 16
 seconds each on Replicate's GPUs, at 1024 px, downscaled to 512. Nothing about it touches
 the AWS account. A manifest records the model version, prompt and seed of every face.
+
+## 26. New-visitor emails: a stream and a pipe, no Lambda
+
+The visitor log already records every sign-in, and a first sign-in is the only write that
+creates an item; later ones update it. So the table's stream carries exactly the events
+worth an email, as `INSERT`s. An EventBridge Pipe reads the stream, filters it to inserts,
+formats the message with an input template and publishes it to an SNS topic with an email
+subscription. There is no function to write, test or patch, and nothing is added to the
+sign-in request: if SNS is slow or down, sign-in is unaffected, and the pipe retries.
+
+Sending from the verify Lambda would have been simpler to read but would put a second
+service on the sign-in path and need the "was this a new visitor" logic in code. A Lambda
+on the stream would have worked too, but only to do what the pipe does as configuration.
+Henry is notified of first sign-ins only; returning visitors are in the table.
+
+The topic uses the AWS-managed SNS key. The pipe publishes as an IAM role in the account,
+which that key's policy allows, so a customer-managed key ($1/month) would add nothing.
+
+## 27. Budget alerts by email, and the alert address kept out of the repo
+
+A $5 monthly cost budget emails Henry when actual spend passes 80% or the month's forecast
+passes 100%. Normal spend is about $0.50 (the hosted zone), so either means something is
+wrong. Budgets emails the address directly rather than through the SNS topic: the
+Budgets service can't use the AWS-managed SNS key, so going through SNS would need a
+customer-managed key.
+
+The repo and its Actions logs are public, so the address is a sensitive Terraform
+variable with no default. Locally it is in the git-ignored `terraform.tfvars`. PR plans
+get it from the `NOTIFICATION_EMAIL` Actions secret, and plans redact it. Without it,
+every PR plan would show the alerts being removed.
