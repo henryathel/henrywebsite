@@ -58,10 +58,13 @@ SNS). Every other region is denied. Design within this; don't plan on changing t
 
 ## Face image
 
-- A pool of a few hundred pre-generated faces stored in S3 under `faces/`, made with
-  FLUX.1 [schnell] (Apache 2.0) on Replicate by `scripts/generate-faces.py`, reviewed by hand,
-  and uploaded by `scripts/upload-faces.sh` as `faces/000.jpg` onward. Not a GAN: the
-  pretrained face GANs are licensed for research only (`docs/decisions.md` #25).
+- A pool of a few hundred pre-generated faces stored in S3 under `faces/`: stand-ins
+  matching Henry's broad profile (young white men), half portraits and half speaking shots.
+  Made with FLUX.1 [dev] and XLabs' realism LoRA on Replicate by
+  `scripts/generate-faces.py`, reviewed by hand, and uploaded by `scripts/upload-faces.sh`
+  as `faces/000.jpg` onward. Not a GAN: the pretrained face GANs are licensed for research
+  only (`docs/decisions.md` #25). Generate only on Replicate, whose terms cover commercial
+  use of FLUX.1 [dev] outputs; never with downloaded weights.
 - `/img/henry-ashton.jpg` serves a **random** face from the pool on each request, using a
   CloudFront Function that rewrites the URI to a random `faces/NNN.jpg`. **Lambda@Edge is not
   an option**: it must be created in `us-east-1`, where the SCP denies Lambda. Use a

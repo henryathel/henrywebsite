@@ -107,12 +107,14 @@ Needs Terraform 1.17, uv (which fetches Python 3.12 itself) and AWS CLI 2.32+. S
    - `ROLES_BUCKET`: the `roles_bucket` output
    - `CLOUDFRONT_DISTRIBUTION_ID`: as above
 
-4. **Face pool** (a placeholder shows until it exists). Generate the faces with FLUX.1
-   [schnell] on Replicate, using an API token from replicate.com (Account settings → API
-   tokens). Keep the output outside the repo:
+4. **Face pool** (a placeholder shows until it exists). Generate the faces on Replicate
+   with an API token from replicate.com (Account settings → API tokens), kept outside the
+   repo in `~/.config/replicate/token` (mode 600). Try a few first; the full 300 take
+   about 80 minutes:
 
    ```sh
-   REPLICATE_API_TOKEN=... scripts/generate-faces.py ~/faces --count 300
+   REPLICATE_API_TOKEN=$(cat ~/.config/replicate/token) scripts/generate-faces.py ~/faces --count 4
+   REPLICATE_API_TOKEN=$(cat ~/.config/replicate/token) scripts/generate-faces.py ~/faces --count 300
    ```
 
    Look through `~/faces` and delete any face that is distorted or odd; the upload
