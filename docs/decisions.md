@@ -249,19 +249,34 @@ drawn by `scripts/make-og-image.py` so it can be regenerated rather than edited 
 On the page, the face has `alt="Henry Ashton"` and a visible caption saying it is
 generated, linked by `aria-describedby` so screen readers announce it too.
 
-## 25. Faces from FLUX.1 [schnell] on a hosted API, not a GAN
+## 25. Faces from FLUX.1 [dev] with XLabs' realism LoRA, on Replicate
 
 The brief asked for GAN faces. The standard choice, NVIDIA's StyleGAN2/3 trained on FFHQ,
 is licensed for "research or evaluation purposes only", and FFHQ itself is Flickr photos
 of real people under a non-commercial licence. A career site is neither research nor
-evaluation, so that licence would be hard to defend. FLUX.1 [schnell] is a
-diffusion model whose weights are Apache 2.0, which allows any use; Replicate's terms
-assign the outputs to the customer. The caption says "AI image model" rather than GAN.
+evaluation, so that licence would be hard to defend.
 
-Generation runs once, on Replicate, from `scripts/generate-faces.py`: a few hundred
-512×512 images cost around a dollar and need no GPU of our own, and nothing about it
-touches the AWS account. Each face gets its own prompt, built from lists of ages,
-ancestries, hair, clothing and backgrounds chosen by a fixed seed, so the pool is varied
-and a resumed run asks for the same faces. Prompts never name a real person. The script
-keeps a manifest of model, prompt and seed for every face, and the pool is reviewed by
-hand before upload.
+FLUX.1 [schnell] (Apache 2.0) was tried first, but its faces looked airbrushed. The faces
+now come from FLUX.1 [dev] with XLabs' realism LoRA (`xlabs-ai/flux-dev-realism`, pinned
+to one version). The [dev] weights are non-commercial, but Replicate states that "if you
+generate images on Replicate with FLUX.1 models and their fine-tunes, then you can use
+the images commercially"; generating anywhere else would not be covered. A community
+"faces" LoRA looked good too, but pulled most faces towards one ethnicity whatever the
+prompt said, which suggests a small training set of real people and a risk of outputs
+resembling them. XLabs' LoRA is a general photographic style and showed no such pull.
+Its training data isn't published either, so every face is reviewed by hand before
+upload.
+
+The faces are stand-ins matching Henry's broad profile, young white men, so a visitor who
+misses the caption isn't left with a wrong impression of him; the caption says plainly
+that it isn't him. Half are portraits and half are candid speaking shots. Each prompt is
+built from lists of heritage, age, hair, face shape, build, clothing and setting, picked
+by a generator seeded from the face's number (hashed, as consecutive integer seeds gave
+neighbouring faces the same traits), so the pool is varied and a resumed run asks for the
+same faces. Prompts never name a real person. Name badges were tried and dropped: the
+model garbles text, and a badge would make each image claim to be Henry wherever it was
+shared without its caption.
+
+Generation runs once from `scripts/generate-faces.py`, one image at a time: about 16
+seconds each on Replicate's GPUs, at 1024 px, downscaled to 512. Nothing about it touches
+the AWS account. A manifest records the model version, prompt and seed of every face.
