@@ -38,7 +38,8 @@ resource "aws_dynamodb_table" "rate_limits" {
   }
 }
 
-# The visitor log is the one table worth recovering, so it has point-in-time recovery.
+# The visitor log is the one table worth recovering, so it has point-in-time recovery. Its
+# stream feeds the new-visitor email (modules/alerts).
 resource "aws_dynamodb_table" "visitors" {
   #checkov:skip=CKV_AWS_119:Encrypted with the AWS-owned key; a CMK costs monthly and adds no access control here.
   name         = "${var.project}-visitors"
@@ -53,6 +54,9 @@ resource "aws_dynamodb_table" "visitors" {
   point_in_time_recovery {
     enabled = true
   }
+
+  stream_enabled   = true
+  stream_view_type = "NEW_IMAGE"
 
   deletion_protection_enabled = true
 }

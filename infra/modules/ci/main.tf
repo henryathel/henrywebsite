@@ -224,6 +224,28 @@ data "aws_iam_policy_document" "plan" {
     actions   = ["ses:GetEmailIdentity", "ses:ListTagsForResource"]
     resources = ["arn:${local.partition}:ses:${local.regional_prefix}:identity/*"]
   }
+
+  # Subscription ARNs start with their topic's ARN, so this covers both.
+  statement {
+    sid = "AlertsRead"
+    actions = [
+      "sns:GetSubscriptionAttributes",
+      "sns:GetTopicAttributes",
+      "sns:ListTagsForResource",
+      "pipes:DescribePipe",
+      "pipes:ListTagsForResource",
+    ]
+    resources = [
+      "arn:${local.partition}:sns:${local.regional_prefix}:${var.project}-*",
+      "arn:${local.partition}:pipes:${local.regional_prefix}:pipe/${var.project}-*",
+    ]
+  }
+
+  statement {
+    sid       = "BudgetRead"
+    actions   = ["budgets:ViewBudget", "budgets:ListTagsForResource"]
+    resources = ["arn:${local.partition}:budgets::${local.account_id}:budget/${var.project}-*"]
+  }
 }
 
 resource "aws_iam_role_policy" "plan" {

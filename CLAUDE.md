@@ -54,7 +54,8 @@ SNS). Every other region is denied. Design within this; don't plan on changing t
   (hashed keys, TTL) and `visitors` table (email, timestamps). On-demand billing.
 - **SES**: verify the domain with DKIM. Note: new SES accounts are in the **sandbox** and can
   only send to verified addresses. Request production access before going live.
-- **Notification** (optional): SNS email to Henry on each new visitor.
+- **Notification**: email to Henry on each new visitor, from the visitor table's stream via
+  an EventBridge Pipe and SNS (`docs/decisions.md` #26).
 
 ## Face image
 
@@ -85,7 +86,7 @@ SNS). Every other region is denied. Design within this; don't plan on changing t
 ## Engineering conventions
 
 - **Everything in Terraform.** No manual console changes. Remote state in S3 with locking.
-  Split into modules: `site`, `auth`, `faces`, `ci`.
+  Split into modules: `site`, `auth`, `faces`, `alerts`, `ci`.
 - **Lambdas**: Python 3.12, type-hinted, Pydantic for request validation, structured logging,
   least-privilege IAM role per function. Tests with pytest (use moto for AWS calls).
 - **CI/CD**: GitHub Actions authenticating to AWS with **OIDC** (no stored keys).
@@ -118,4 +119,5 @@ _Settled: domain `henryashton.dev` (registered at Namecheap, DNS in Route 53), c
 `www.henryashton.dev` with the apex redirecting to it. Cookie lifetime 5 days; sign-in code
 expiry 10 minutes, 6 digits, 5 attempts; sender `signin@henryashton.dev`._
 
-- Email address that should receive visitor notifications (step 5).
+_Settled in step 5: alerts go to Henry's personal address, set in the git-ignored
+`infra/terraform.tfvars` and the `NOTIFICATION_EMAIL` Actions secret. Never commit it._
