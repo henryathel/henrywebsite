@@ -298,6 +298,16 @@ Henry is notified of first sign-ins only; returning visitors are in the table.
 The topic uses the AWS-managed SNS key. The pipe publishes as an IAM role in the account,
 which that key's policy allows, so a customer-managed key ($1/month) would add nothing.
 
+**Cost, found after it went live:** the pipe isn't free. It polls the stream continuously,
+whether or not anything has changed: about 7,000 `GetRecords` calls an hour, about 5 million
+a month. Each one is billed as a stream read request, empty or not. Pipes gets the
+2.5 million a month free that any non-Lambda reader gets, so the rest costs about
+$0.50/month, roughly doubling the site's fixed cost. There is no setting for the polling
+rate, and the batching window is documented only as a wait for records, not fewer reads.
+A Lambda trigger on the stream would cost nothing, because DynamoDB doesn't charge for
+Lambda triggers' reads. It would mean a small function to maintain, and Henry chose to keep
+the pipe. The change is written up in issue #15.
+
 ## 27. Budget alerts by email, and the alert address kept out of the repo
 
 A $5 monthly cost budget emails Henry when actual spend passes 80% or the month's forecast
